@@ -31,7 +31,11 @@ public class PedidoController {
         this.pedidoService = pedidoService;
     }
 
-    /** Recibe un pedido validado, toma al cliente del principal autenticado y responde con estado HTTP 201. */
+    /** Recibe un pedido validado, toma al cliente del principal autenticado y responde con estado HTTP 201.
+     * @param request restaurante y líneas de platos solicitadas
+     * @param user cliente identificado por el JWT, nunca por un ID recibido en el cuerpo
+     * @return envoltorio con el pedido creado y su estado inicial
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PedidoApiResponse crear(@Valid @RequestBody PedidoRequest request,
@@ -40,7 +44,13 @@ public class PedidoController {
         return new PedidoApiResponse(true, "Pedido creado", pedidoService.crear(request, user));
     }
 
-    /** Consulta una página de pedidos por estado; el servicio deriva el restaurante del empleado autenticado. */
+    /** Consulta una página de pedidos por estado; el servicio deriva el restaurante del empleado autenticado.
+     * @param estado etapa del ciclo de vida que se desea consultar
+     * @param page índice de página, empezando en cero
+     * @param size cantidad solicitada, acotada por el servicio
+     * @param user empleado autenticado con el restaurante firmado en el JWT
+     * @return página de pedidos del restaurante asociado a ese empleado
+     */
     @GetMapping
     public Page<PedidoResponse> listar(@RequestParam EstadoPedido estado,
                                        @RequestParam(defaultValue = "0") int page,

@@ -1,6 +1,6 @@
 # Arquitectura
 
-El repositorio contiene el microservicio Plazoleta como aplicación Spring Boot independiente. Usuarios sigue siendo otro servicio y emite credenciales firmadas; Plazoleta verifica esas credenciales localmente con HMAC-SHA256.
+El repositorio contiene el microservicio Plazoleta como aplicación Spring Boot independiente. Usuarios sigue siendo otro servicio y emite JWT; Plazoleta los verifica localmente con HS256.
 
 ## Capas
 
@@ -20,4 +20,4 @@ MySQL (`plazoleta_bd`) es la base de ejecución local; `SPRING_DATASOURCE_URL` y
 
 ## Seguridad
 
-Se verifica el formato compartido con Usuarios: `base64url(idUsuario:ROL:vencimientoEpochSegundos).base64url(HMAC-SHA256)`. La firma se compara en tiempo constante, se exige vencimiento vigente y el rol procede únicamente del contenido firmado. `AUTH_SECRET` debe ser idéntico en ambos servicios; si falta, la app genera un secreto efímero y los tokens de Usuarios no serán aceptados.
+Se valida un JWT estándar firmado con HS256. El contrato de claims es `sub` (ID de usuario numérico), `rol` (`ADMINISTRADOR`, `PROPIETARIO`, `EMPLEADO` o `CLIENTE`), `exp` (Unix epoch seconds) y opcionalmente `idRestaurante` para empleados. La biblioteca valida firma y vencimiento; el principal y autoridad se construyen únicamente desde claims verificadas. `AUTH_SECRET` debe ser idéntico en ambos servicios y contener al menos 32 bytes UTF-8; sin una clave configurada la aplicación no inicia.

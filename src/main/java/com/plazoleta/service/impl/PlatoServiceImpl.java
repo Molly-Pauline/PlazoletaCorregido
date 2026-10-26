@@ -18,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Aplica reglas de propiedad, actualización limitada y consulta del menú de platos. */
-/** Aplica reglas de propiedad, actualización limitada y consulta del menú de platos. */
 @Service
 public class PlatoServiceImpl implements PlatoService {
 

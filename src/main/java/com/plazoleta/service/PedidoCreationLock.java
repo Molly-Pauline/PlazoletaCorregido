@@ -14,7 +14,6 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /** Serializa la creación de pedidos del mismo cliente entre hilos e instancias de la aplicación. */
-/** Serializa la creación de pedidos del mismo cliente entre hilos e instancias de la aplicación. */
 @Component
 public class PedidoCreationLock {
 

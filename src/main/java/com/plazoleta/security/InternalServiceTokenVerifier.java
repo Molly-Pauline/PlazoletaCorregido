@@ -7,7 +7,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
 /** Valida el token compartido de autenticación entre servicios internos. */
-/** Valida el token compartido de autenticación entre servicios internos. */
 @Component
 public class InternalServiceTokenVerifier {
 
