@@ -1,10 +1,10 @@
 # Plazoleta de comidas
 
-Microservicio REST para restaurantes y platos, migrado a Spring Boot 3.5.5 con Java 17. Este repositorio corresponde al Repo B; el microservicio de Usuarios continúa en su repositorio separado.
+Microservicio REST para restaurantes y platos, migrado a Spring Boot 3.5.5 con Java 25 LTS. Este repositorio corresponde al Repo B; el microservicio de Usuarios continúa en su repositorio separado.
 
 ## Requisitos
 
-- JDK 17
+- JDK 25 LTS
 - Maven 3.9 o Maven Wrapper
 
 ## Ejecutar
