@@ -2,5 +2,7 @@ target/
 .idea/
 .vscode/
 .env
+.env.local
+application-local.properties
 *.iml
 *.log
