@@ -16,4 +16,4 @@ Plazoleta configura host y ruta mediante `USUARIOS_BASE_URL` y `USUARIOS_OWNER_V
 
 Usuarios reenvía el Bearer del propietario a `GET /restaurantes/{idRestaurante}/propietario/{idPropietario}` en Plazoleta. Plazoleta exige rol `PROPIETARIO`, compara el propietario del token con el identificador solicitado y confirma la relación persistida. Solo con respuesta `true` Usuarios crea la cuenta del empleado asociada al restaurante.
 
-El login de Usuarios firma el identificador del empleado y su `idRestaurante` dentro del token HMAC. Plazoleta usa esa afirmación firmada para limitar HU12 al restaurante del empleado, sin aceptar un ID de restaurante desde el query string.
+HU5 debe emitir JWT estándar firmado con HS256. El contrato compartido incluye `sub` (ID de usuario numérico), `rol`, `exp` (Unix epoch seconds) y, para empleados, `idRestaurante`. Usuarios y Plazoleta deben usar el mismo `AUTH_SECRET` de al menos 32 bytes UTF-8. Plazoleta valida firma y expiración antes de construir la identidad; usa el `idRestaurante` firmado para limitar HU12 y no acepta un ID de restaurante desde el query string.

@@ -33,7 +33,11 @@ public class PlatoController {
         this.platoService = platoService;
     }
 
-    /** Crea un plato del restaurante autorizado y responde con HTTP 201. */
+    /** Crea un plato del restaurante autorizado y responde con HTTP 201.
+     * @param request datos validados del nuevo plato y restaurante destino
+     * @param user principal autenticado cuyo rol y propiedad confirma el servicio
+     * @return respuesta con el DTO público del plato creado
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PlatoApiResponse crear(@Valid @RequestBody PlatoRequest request,
@@ -44,7 +48,12 @@ public class PlatoController {
         return new PlatoApiResponse(true, "Plato creado", PlatoResponse.from(plato));
     }
 
-    /** Modifica únicamente los campos aceptados por PlatoUpdateRequest (HU4). */
+    /** Modifica únicamente los campos aceptados por PlatoUpdateRequest (HU4).
+     * @param idPlato plato existente que se actualizará
+     * @param request nuevos precio y descripción
+     * @param user propietario autenticado que debe controlar el restaurante del plato
+     * @return respuesta con el plato actualizado
+     */
     @PutMapping("/{idPlato}")
     public PlatoApiResponse modificar(@PathVariable Long idPlato, @Valid @RequestBody PlatoUpdateRequest request,
                                       @AuthenticationPrincipal AuthenticatedUser user) {
@@ -53,7 +62,12 @@ public class PlatoController {
         return new PlatoApiResponse(true, "Plato modificado", PlatoResponse.from(plato));
     }
 
-    /** Cambia el indicador de disponibilidad del plato, sin alterar sus demás datos (HU7). */
+    /** Cambia el indicador de disponibilidad del plato, sin alterar sus demás datos (HU7).
+     * @param idPlato plato existente cuya disponibilidad se modifica
+     * @param request nuevo valor activo/inactivo
+     * @param user propietario autenticado que debe controlar el restaurante del plato
+     * @return respuesta con el estado actualizado del plato
+     */
     @PatchMapping("/{idPlato}/estado")
     public PlatoApiResponse cambiarEstado(@PathVariable Long idPlato, @Valid @RequestBody PlatoEstadoRequest request,
                                           @AuthenticationPrincipal AuthenticatedUser user) {

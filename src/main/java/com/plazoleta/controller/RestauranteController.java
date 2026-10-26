@@ -46,7 +46,10 @@ public class RestauranteController {
         this.internalServiceTokenVerifier = internalServiceTokenVerifier;
     }
 
-    /** Registra un restaurante después de validar datos y propietario en el servicio. */
+    /** Registra un restaurante después de validar datos y propietario en el servicio.
+     * @param request datos del restaurante y referencia del propietario por validar
+     * @return envoltorio de éxito con los datos públicos del restaurante creado
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public RestauranteApiResponse crear(@Valid @RequestBody RestauranteRequest request) {
@@ -55,14 +58,24 @@ public class RestauranteController {
         return new RestauranteApiResponse(true, "Restaurante creado", RestauranteResponse.from(restaurante));
     }
 
-    /** Lista restaurantes por páginas; la ordenación ascendente se define en el servicio. */
+    /** Lista restaurantes por páginas; la ordenación ascendente se define en el servicio.
+     * @param page índice de página, empezando en cero
+     * @param size cantidad solicitada, limitada por el servicio
+     * @return página con la proyección pública reducida de cada restaurante
+     */
     @GetMapping
     public Page<RestauranteListadoResponse> listar(@RequestParam(defaultValue = "0") int page,
                                                    @RequestParam(defaultValue = "10") int size) {
         return restauranteService.listar(page, size);
     }
 
-    /** Devuelve el menú paginado de un restaurante, con filtro opcional por categoría. */
+    /** Devuelve el menú paginado de un restaurante, con filtro opcional por categoría.
+     * @param idRestaurante restaurante cuyo menú se consulta
+     * @param categoria filtro opcional que se compara sin distinguir mayúsculas
+     * @param page índice de página, empezando en cero
+     * @param size cantidad de platos por página
+     * @return página de platos activos que cumplen el filtro
+     */
     @GetMapping("/{idRestaurante}/platos")
     public Page<PlatoResponse> listarMenu(@PathVariable Long idRestaurante,
                                          @RequestParam(required = false) String categoria,
@@ -71,7 +84,13 @@ public class RestauranteController {
         return platoService.listarMenu(idRestaurante, categoria, page, size);
     }
 
-    /** Confirma a Usuarios que el propietario del token coincide con la relación persistida del restaurante. */
+    /** Confirma a Usuarios que el propietario del token coincide con la relación persistida del restaurante.
+     * @param idRestaurante restaurante cuya propiedad se consulta
+     * @param idPropietario ID que Usuarios espera validar
+     * @param user identidad del propietario tomada del JWT verificado
+     * @param serviceToken credencial interna que autentica la llamada entre microservicios
+     * @return true solo cuando identidad solicitada y propietario persistido coinciden
+     */
     @GetMapping("/{idRestaurante}/propietario/{idPropietario}")
     public boolean perteneceAPropietario(@PathVariable Long idRestaurante, @PathVariable Long idPropietario,
                                          @AuthenticationPrincipal AuthenticatedUser user,

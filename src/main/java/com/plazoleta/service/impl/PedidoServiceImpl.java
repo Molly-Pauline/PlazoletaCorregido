@@ -26,7 +26,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 /** Implementa las reglas de negocio para crear pedidos y consultar los de un restaurante. */
-/** Implementa las reglas de negocio para crear pedidos y consultar los de un restaurante. */
 @Service
 public class PedidoServiceImpl implements PedidoService {
 

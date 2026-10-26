@@ -25,7 +25,7 @@ El script usa `CREATE TABLE IF NOT EXISTS`: no modifica tablas antiguas ya exist
 
 ## API
 
-Todas las rutas de negocio reciben `Authorization: Bearer <token>` emitido por Usuarios. Plazoleta valida la firma HMAC y obtiene el identificador y rol desde el token firmado; no confía en `X-Rol` ni `X-User-Id`.
+Todas las rutas de negocio reciben `Authorization: Bearer <token>` como JWT HS256 emitido por Usuarios. Plazoleta valida firma y expiración y obtiene `sub`, `rol` y opcionalmente `idRestaurante` solo desde claims firmadas; no confía en `X-Rol` ni `X-User-Id`.
 
 | Método | Ruta | Permiso | Historia |
 | --- | --- | --- | --- |
@@ -41,11 +41,11 @@ Todas las rutas de negocio reciben `Authorization: Bearer <token>` emitido por U
 
 HU4 solo admite `precio` y `descripcion`; los demás datos del plato se conservan. HU2 comprueba que el usuario asociado exista y tenga rol `PROPIETARIO` mediante `GET /api/v1/usuarios/{id}/validacion-propietario` de Usuarios. HU6 valida la asociación empleado/restaurante mediante un token Bearer reenviado a Plazoleta; el token del empleado incluye `idRestaurante` firmado. HU11 impide otro pedido mientras exista uno `PENDIENTE`, `EN_PREPARACION` o `LISTO`; HU12 filtra por estado y limita la consulta al restaurante firmado.
 
-La colección Postman está en [`postman/Plazoleta.postman_collection.json`](postman/Plazoleta.postman_collection.json), con environment importable en [`postman/Plazoleta.local.postman_environment.json`](postman/Plazoleta.local.postman_environment.json). Para flujo completo, importa también la colección y environment de Usuarios, corre Usuarios en `8081` y Plazoleta en `8080`, e inicia sesión para llenar `token`. Ambos procesos deben compartir el mismo `AUTH_SECRET`.
+La colección Postman está en [`postman/Plazoleta.postman_collection.json`](postman/Plazoleta.postman_collection.json), con environment importable en [`postman/Plazoleta.local.postman_environment.json`](postman/Plazoleta.local.postman_environment.json). Para flujo completo, importa también la colección y environment de Usuarios, corre Usuarios en `8081` y Plazoleta en `8080`, e inicia sesión para llenar `token`. Ambos procesos deben compartir el mismo `AUTH_SECRET` de al menos 32 bytes UTF-8 y emitir JWT con `alg=HS256`, `sub` (ID de usuario numérico), `rol` y `exp` Unix; `idRestaurante` es opcional y firmado.
 
 ## Configuración
 
-- `AUTH_SECRET`: secreto compartido con Usuarios; ambos servicios deben usar el mismo valor.
+- `AUTH_SECRET`: secreto compartido con Usuarios para JWT HS256; usa el mismo valor de al menos 32 bytes UTF-8 en ambos servicios.
 - `INTERNAL_SERVICE_TOKEN`: token aleatorio de al menos 32 caracteres, compartido para las llamadas internas Usuarios↔Plazoleta.
 - `USUARIOS_BASE_URL`: URL base del servicio Usuarios (por defecto `http://localhost:8081`).
 - `SPRING_DATASOURCE_URL`: por defecto `jdbc:mysql://localhost:3306/plazoleta_bd`.
