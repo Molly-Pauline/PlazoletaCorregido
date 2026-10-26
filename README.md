@@ -18,7 +18,7 @@ Sin configuración adicional, la aplicación usa H2 en memoria y escucha en `htt
 
 ## API
 
-Todas las rutas de negocio reciben `Authorization: Bearer <token>` emitido por Usuarios. Plazoleta valida la firma HMAC y obtiene el identificador y rol desde el token firmado; no confía en `X-Rol` ni `X-User-Id`.
+Todas las rutas de negocio reciben `Authorization: Bearer <token>` como JWT HS256 emitido por Usuarios. Plazoleta valida firma y expiración y obtiene `sub`, `rol` y opcionalmente `idRestaurante` solo desde claims firmadas; no confía en `X-Rol` ni `X-User-Id`.
 
 | Método | Ruta | Permiso | Historia |
 | --- | --- | --- | --- |
@@ -31,7 +31,7 @@ HU4 solo admite `precio` y `descripcion`; los demás datos del plato se conserva
 
 ## Configuración
 
-- `AUTH_SECRET`: secreto compartido con Usuarios; ambos servicios deben usar el mismo valor.
+- `AUTH_SECRET`: secreto compartido con Usuarios para JWT HS256; usa el mismo valor de al menos 32 bytes UTF-8 en ambos servicios.
 - `USUARIOS_BASE_URL`: URL base del servicio Usuarios (por defecto `http://localhost:8081`).
 - `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`: conexión opcional a PostgreSQL; el valor por defecto es H2 en memoria.
 - `DDL_AUTO`: estrategia Hibernate, por defecto `update` para desarrollo.

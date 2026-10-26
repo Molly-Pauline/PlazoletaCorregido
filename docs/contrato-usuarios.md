@@ -11,3 +11,7 @@ HU2 exige comprobar que `idPropietario` existe y su rol es `PROPIETARIO`. El ser
 - Errores de red/servidor: Plazoleta responde `503` y no crea el restaurante.
 
 La ruta y el host se configuran con `USUARIOS_OWNER_VALIDATION_PATH` y `USUARIOS_BASE_URL`. Hasta que Usuarios implemente el contrato, las pruebas de Plazoleta sustituyen el puerto con un mock. No se debe resolver esta integración leyendo directamente la base de datos privada de Usuarios.
+
+## Autenticación compartida (HU5)
+
+Usuarios debe emitir JWT estándar firmado con HS256. El contrato compartido incluye `sub` (ID de usuario numérico), `rol`, `exp` (Unix epoch seconds) y, para empleados, `idRestaurante`. Usuarios y Plazoleta deben usar el mismo `AUTH_SECRET` de al menos 32 bytes UTF-8. Plazoleta valida firma y expiración antes de construir la identidad autenticada y aplicar los permisos del rol.
