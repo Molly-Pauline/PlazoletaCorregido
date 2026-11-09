@@ -12,15 +12,19 @@ import com.plazoleta.exception.DomainException;
 import com.plazoleta.repository.PedidoRepository;
 import com.plazoleta.repository.PlatoRepository;
 import com.plazoleta.repository.RestauranteRepository;
+import com.plazoleta.repository.UsuarioRepository;
 import com.plazoleta.security.AuthenticatedUser;
+import com.plazoleta.service.NotificacionSmsService;
 import com.plazoleta.service.PedidoService;
 import com.plazoleta.service.PedidoCreationLock;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -42,13 +46,27 @@ public class PedidoServiceImpl implements PedidoService {
     private final RestauranteRepository restauranteRepository;
     /** Evita carreras al crear pedidos concurrentes para el mismo cliente. */
     private final PedidoCreationLock pedidoCreationLock;
-    /** Inyecta los repositorios y el mecanismo de exclusión por cliente. */
+    /** Permite obtener el celular del cliente para avisarle que su pedido está listo. */
+    private final UsuarioRepository usuarioRepository;
+    /** Protege el PIN con BCrypt, igual que las contraseñas. */
+    private final PasswordEncoder passwordEncoder;
+    /** Envía el PIN de seguridad al cliente (HU14). */
+    private final NotificacionSmsService notificacionSms;
+    /** Generador apto para valores de seguridad como el PIN. */
+    private final SecureRandom random = new SecureRandom();
+
+    /** Inyecta los repositorios, el mecanismo de exclusión por cliente y los servicios de apoyo. */
     public PedidoServiceImpl(PedidoRepository pedidoRepository, PlatoRepository platoRepository,
-                             RestauranteRepository restauranteRepository, PedidoCreationLock pedidoCreationLock) {
+                             RestauranteRepository restauranteRepository, PedidoCreationLock pedidoCreationLock,
+                             UsuarioRepository usuarioRepository,
+                             PasswordEncoder passwordEncoder, NotificacionSmsService notificacionSms) {
         this.pedidoRepository = pedidoRepository;
         this.platoRepository = platoRepository;
         this.restauranteRepository = restauranteRepository;
         this.pedidoCreationLock = pedidoCreationLock;
+        this.usuarioRepository = usuarioRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.notificacionSms = notificacionSms;
     }
 
     /** Crea un pedido en una sola transacción y restringe la operación a clientes autenticados (HU11). */
@@ -144,6 +162,20 @@ public class PedidoServiceImpl implements PedidoService {
         return PedidoResponse.from(pedido);
     }
 
+    /** Marca el pedido como listo y envía el PIN por SMS; si el envío falla, el cambio se revierte (HU14). */
+    @Override
+    @Transactional
+    public PedidoResponse marcarListo(Integer idPedido, AuthenticatedUser empleado) {
+        Pedido pedido = obtenerDelRestaurante(idPedido, empleado);
+        EstadoPedido anterior = pedido.getEstado();
+        String pin = generarPin();
+        pedido.marcarListo(passwordEncoder.encode(pin));
+        notificacionSms.enviar(obtenerCelularCliente(pedido),
+                "Tu pedido #" + pedido.getId() + " de " + pedido.getRestaurante().getNombre()
+                        + " esta listo. PIN para reclamarlo: " + pin);
+        return PedidoResponse.from(pedido);
+    }
+
     /** Carga el pedido bloqueando su fila y exige que pertenezca al restaurante firmado en el token del empleado. */
     private Pedido obtenerDelRestaurante(Integer idPedido, AuthenticatedUser empleado) {
         if (empleado == null || !"EMPLEADO".equals(empleado.rol()) || empleado.idRestaurante() == null) {
@@ -154,6 +186,19 @@ public class PedidoServiceImpl implements PedidoService {
             throw new DomainException(HttpStatus.FORBIDDEN, "El pedido no pertenece al restaurante del empleado");
         }
         return pedido;
+    }
+
+    /** Obtiene el celular de destino del SMS. */
+    private String obtenerCelularCliente(Pedido pedido) {
+        return usuarioRepository.findById(pedido.getIdCliente())
+                .map(usuario -> usuario.getCelular())
+                .filter(celular -> !celular.isBlank())
+                .orElseThrow(() -> new DomainException(HttpStatus.CONFLICT, "El cliente no tiene un celular registrado"));
+    }
+
+    /** Genera un PIN aleatorio de seis dígitos, conservando los ceros iniciales. */
+    private String generarPin() {
+        return String.format("%06d", random.nextInt(1_000_000));
     }
 
     private DomainException pedidoNoEncontrado() {

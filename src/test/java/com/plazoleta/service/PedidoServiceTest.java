@@ -10,12 +10,14 @@ import com.plazoleta.exception.DomainException;
 import com.plazoleta.repository.PedidoRepository;
 import com.plazoleta.repository.PlatoRepository;
 import com.plazoleta.repository.RestauranteRepository;
+import com.plazoleta.repository.UsuarioRepository;
 import com.plazoleta.security.AuthenticatedUser;
 import com.plazoleta.service.PedidoCreationLock;
 import com.plazoleta.service.impl.PedidoServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
 import java.util.Optional;
@@ -38,7 +40,9 @@ class PedidoServiceTest {
     /** El candado se sustituye para aislar aquí las reglas de dominio del mecanismo de concurrencia. */
         private final PedidoCreationLock orderCreationLock = mock(PedidoCreationLock.class);
         private final PedidoServiceImpl service = new PedidoServiceImpl(
-            pedidoRepository, platoRepository, restauranteRepository, orderCreationLock);
+            pedidoRepository, platoRepository, restauranteRepository, orderCreationLock,
+            mock(UsuarioRepository.class),
+            mock(PasswordEncoder.class), mock(NotificacionSmsService.class));
     /** Principal autenticado usado para representar al cliente que solicita el pedido. */
     private final AuthenticatedUser customer = new AuthenticatedUser(25, "CLIENTE");
 
