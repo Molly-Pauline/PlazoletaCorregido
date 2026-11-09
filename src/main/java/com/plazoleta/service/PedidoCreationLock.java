@@ -18,7 +18,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 public class PedidoCreationLock {
 
     /** Respaldo local para pruebas y bases de datos que no ofrecen GET_LOCK. */
-    private static final ConcurrentHashMap<Long, ReentrantLock> LOCAL_LOCKS = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Integer, ReentrantLock> LOCAL_LOCKS = new ConcurrentHashMap<>();
     /** Ejecuta consultas y detecta qué motor de base de datos está conectado. */
     private final JdbcTemplate jdbcTemplate;
 
@@ -28,7 +28,7 @@ public class PedidoCreationLock {
     }
 
     /** Obtiene el bloqueo asociado al cliente antes de validar o persistir su pedido. */
-    public Handle acquire(Long idCliente) {
+    public Handle acquire(Integer idCliente) {
         // El bloqueo de MySQL es compartido por varias instancias; H2 y otros motores usan el bloqueo local.
         String database = jdbcTemplate.execute((Connection connection) -> connection.getMetaData().getDatabaseProductName());
         if (database != null && (database.equalsIgnoreCase("MySQL") || database.equalsIgnoreCase("MariaDB"))) {
@@ -52,7 +52,7 @@ public class PedidoCreationLock {
     }
 
     /** Usa un candado nombrado del servidor SQL, coordinando clientes atendidos por distintas instancias. */
-    private Handle acquireMysqlLock(Long idCliente) {
+    private Handle acquireMysqlLock(Integer idCliente) {
         // El identificador es determinista por cliente; el timeout coincide con el tiempo máximo de espera.
         String lockName = "plazoleta-order-" + idCliente;
         // GET_LOCK devuelve 1 solo si se obtuvo el candado; null/0 indica que no se consiguió.

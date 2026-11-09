@@ -15,7 +15,7 @@ public class Restaurante {
     /** Clave primaria generada por la base de datos. */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     /** Nombre obligatorio limitado para evitar almacenar valores fuera del tamaño definido en el modelo. */
     @Column(nullable = false, length = 120)
@@ -39,14 +39,14 @@ public class Restaurante {
 
     /** ID externo de Usuarios; no es una relación JPA porque cada servicio administra su propia base. */
     @Column(name = "id_propietario", nullable = false)
-    private Long idPropietario;
+    private Integer idPropietario;
 
     /** Constructor requerido por JPA para reconstruir la entidad desde la tabla. */
     protected Restaurante() {
     }
 
     /** Construye un restaurante con los datos validados por el contrato de entrada y el servicio. */
-    public Restaurante(String nombre, String nit, String direccion, String telefono, String urlLogo, Long idPropietario) {
+    public Restaurante(String nombre, String nit, String direccion, String telefono, String urlLogo, Integer idPropietario) {
         this.nombre = nombre;
         this.nit = nit;
         this.direccion = direccion;
@@ -55,11 +55,11 @@ public class Restaurante {
         this.idPropietario = idPropietario;
     }
 
-    public Long getId() { return id; }
+    public Integer getId() { return id; }
     public String getNombre() { return nombre; }
     public String getNit() { return nit; }
     public String getDireccion() { return direccion; }
     public String getTelefono() { return telefono; }
     public String getUrlLogo() { return urlLogo; }
-    public Long getIdPropietario() { return idPropietario; }
+    public Integer getIdPropietario() { return idPropietario; }
 }

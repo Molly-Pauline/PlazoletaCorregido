@@ -18,7 +18,7 @@ public class Plato {
     /** Clave primaria asignada por la base de datos. */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     /** Nombre mostrado en la carta. */
     @Column(nullable = false, length = 120)
@@ -76,7 +76,7 @@ public class Plato {
         this.activo = activo;
     }
 
-    public Long getId() { return id; }
+    public Integer getId() { return id; }
     public String getNombre() { return nombre; }
     public Integer getPrecio() { return precio; }
     public String getDescripcion() { return descripcion; }

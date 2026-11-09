@@ -18,7 +18,7 @@ public class DetallePedido {
     /** Clave primaria generada para cada línea del pedido. */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     /** Relación obligatoria con la cabecera, establecida al agregar este detalle al pedido. */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -54,7 +54,7 @@ public class DetallePedido {
         this.pedido = pedido;
     }
 
-    public Long getId() { return id; }
+    public Integer getId() { return id; }
     public Plato getPlato() { return plato; }
     public Integer getCantidad() { return cantidad; }
     public Integer getPrecioUnitario() { return precioUnitario; }

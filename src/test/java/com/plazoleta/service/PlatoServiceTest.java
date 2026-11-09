@@ -32,18 +32,18 @@ class PlatoServiceTest {
     private final PlatoServiceImpl service = new PlatoServiceImpl(platoRepository, restauranteRepository);
         /** Restaurante cuyo propietario persistido es el usuario de prueba 10. */
     private final Restaurante restaurant = new Restaurante(
-            "La Casona", "123456789", "Calle 123", "+573001234567", "https://example.com/logo.png", 10L);
+            "La Casona", "123456789", "Calle 123", "+573001234567", "https://example.com/logo.png", 10);
         /** Identidad firmada que sí tiene autorización sobre el restaurante de prueba. */
-    private final AuthenticatedUser owner = new AuthenticatedUser(10L, "PROPIETARIO");
+    private final AuthenticatedUser owner = new AuthenticatedUser(10, "PROPIETARIO");
 
         /** El propietario asociado puede crear un plato, que comienza activo y ligado a su restaurante. */
     @Test
     void createsActiveDishForOwningRestaurant() {
                 // La búsqueda entrega el restaurante existente y el guardado devuelve el objeto construido.
-        when(restauranteRepository.findById(1L)).thenReturn(Optional.of(restaurant));
+        when(restauranteRepository.findById(1)).thenReturn(Optional.of(restaurant));
         when(platoRepository.save(any(Plato.class))).thenAnswer(invocation -> invocation.getArgument(0));
         PlatoRequest request = new PlatoRequest("Hamburguesa", 25000, "Con queso",
-                "https://example.com/burger.png", "Hamburguesas", 1L);
+                "https://example.com/burger.png", "Hamburguesas", 1);
 
         Plato created = service.crear(request, owner);
 
@@ -55,12 +55,12 @@ class PlatoServiceTest {
         /** Un propietario diferente no puede crear platos ni siquiera si el restaurante existe. */
     @Test
     void refusesDishForAnotherOwnersRestaurant() {
-        when(restauranteRepository.findById(1L)).thenReturn(Optional.of(restaurant));
+        when(restauranteRepository.findById(1)).thenReturn(Optional.of(restaurant));
         PlatoRequest request = new PlatoRequest("Hamburguesa", 25000, "Con queso",
-                "https://example.com/burger.png", "Hamburguesas", 1L);
+                "https://example.com/burger.png", "Hamburguesas", 1);
 
                 // El principal 11 no coincide con el propietario 10 del restaurante.
-        assertThrows(DomainException.class, () -> service.crear(request, new AuthenticatedUser(11L, "PROPIETARIO")));
+        assertThrows(DomainException.class, () -> service.crear(request, new AuthenticatedUser(11, "PROPIETARIO")));
 
                 // La negativa debe ocurrir antes de persistir cualquier Plato.
         verify(platoRepository, never()).save(any());
@@ -72,10 +72,10 @@ class PlatoServiceTest {
         Plato dish = new Plato("Hamburguesa", 25000, "Con queso", "https://example.com/burger.png",
                 "Hamburguesas", restaurant);
         // El servicio recibe la entidad existente y el repositorio retorna esa misma instancia tras guardar.
-        when(platoRepository.findById(4L)).thenReturn(Optional.of(dish));
+        when(platoRepository.findById(4)).thenReturn(Optional.of(dish));
         when(platoRepository.save(dish)).thenReturn(dish);
 
-        Plato updated = service.modificar(4L, new PlatoUpdateRequest(30000, "Con queso y tocineta"), owner);
+        Plato updated = service.modificar(4, new PlatoUpdateRequest(30000, "Con queso y tocineta"), owner);
 
         // Comprueba los dos únicos campos mutables autorizados por el contrato HU4.
         assertEquals(30000, updated.getPrecio());
@@ -91,16 +91,16 @@ class PlatoServiceTest {
     void ownerCanDisableOwnDishButAnotherOwnerCannot() {
         Plato dish = new Plato("Hamburguesa", 25000, "Con queso", "https://example.com/burger.png",
                 "Hamburguesas", restaurant);
-        when(platoRepository.findById(4L)).thenReturn(Optional.of(dish));
+        when(platoRepository.findById(4)).thenReturn(Optional.of(dish));
         when(platoRepository.save(dish)).thenReturn(dish);
 
         // El propietario correcto solicita desactivar el plato existente.
-        Plato disabled = service.cambiarEstado(4L, new PlatoEstadoRequest(false), owner);
+        Plato disabled = service.cambiarEstado(4, new PlatoEstadoRequest(false), owner);
 
         // false confirma el cambio de disponibilidad sin eliminar la entidad.
         assertEquals(false, disabled.isActivo());
         // La misma operación con identidad de otro propietario se rechaza.
-        assertThrows(DomainException.class, () -> service.cambiarEstado(4L, new PlatoEstadoRequest(true),
-                new AuthenticatedUser(11L, "PROPIETARIO")));
+        assertThrows(DomainException.class, () -> service.cambiarEstado(4, new PlatoEstadoRequest(true),
+                new AuthenticatedUser(11, "PROPIETARIO")));
     }
 }

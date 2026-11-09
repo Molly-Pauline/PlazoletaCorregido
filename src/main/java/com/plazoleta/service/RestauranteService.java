@@ -14,5 +14,5 @@ public interface RestauranteService {
     Page<RestauranteListadoResponse> listar(int page, int size);
 
     /** Comprueba si el ID de propietario coincide con el propietario persistido del restaurante. */
-    boolean perteneceAPropietario(Long idRestaurante, Long idPropietario);
+    boolean perteneceAPropietario(Integer idRestaurante, Integer idPropietario);
 }

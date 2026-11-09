@@ -16,8 +16,8 @@ import java.util.List;
  * @param total importe calculado con precios persistidos y cantidades solicitadas
  * @param platos líneas del pedido con sus precios unitarios históricos
  */
-public record PedidoResponse(Long id, Long idCliente, Long idEmpleado, Long idRestaurante, String estado,
-                             LocalDateTime fechaCreacion, Long total, List<PedidoDetalleResponse> platos) {
+public record PedidoResponse(Integer id, Integer idCliente, Integer idEmpleado, Integer idRestaurante, String estado,
+                             LocalDateTime fechaCreacion, Integer total, List<PedidoDetalleResponse> platos) {
     /** Mapea la cabecera y transforma cada detalle al DTO que se expone por la API. */
     public static PedidoResponse from(Pedido pedido) {
         // Enum.name fija una representación textual estable y cada detalle se convierte sin devolver entidades JPA.

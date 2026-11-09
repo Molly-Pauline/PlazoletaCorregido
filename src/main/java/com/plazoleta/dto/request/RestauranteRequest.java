@@ -19,5 +19,5 @@ public record RestauranteRequest(
         // El logo debe ser una URL que use HTTP o HTTPS.
         @NotBlank @Pattern(regexp = "https?://.+", message = "La URL del logo debe ser HTTP o HTTPS") String urlLogo,
         // Es una referencia al usuario propietario; el servicio Usuarios confirma existencia y rol.
-        @NotNull @Positive Long idPropietario) {
+        @NotNull @Positive Integer idPropietario) {
 }

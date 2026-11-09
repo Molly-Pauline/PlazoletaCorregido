@@ -61,7 +61,7 @@ public class RestauranteServiceImpl implements RestauranteService {
 
     /** Comprueba la relación restaurante-propietario sin filtrar excepciones por ID inexistente. */
     @Transactional(readOnly = true)
-    public boolean perteneceAPropietario(Long idRestaurante, Long idPropietario) {
+    public boolean perteneceAPropietario(Integer idRestaurante, Integer idPropietario) {
         // Si existe, compara la referencia guardada; si no, responde false para no afirmar propiedad.
         return restauranteRepository.findById(idRestaurante)
                 .map(restaurante -> restaurante.getIdPropietario().equals(idPropietario))

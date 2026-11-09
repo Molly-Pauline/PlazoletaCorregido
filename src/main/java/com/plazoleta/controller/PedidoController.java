@@ -58,4 +58,5 @@ public class PedidoController {
                                        @AuthenticationPrincipal AuthenticatedUser user) {
         return pedidoService.listarPorEstado(estado, page, size, user);
     }
+
 }

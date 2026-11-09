@@ -26,15 +26,15 @@ public class Pedido {
     /** Clave primaria del pedido. */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     /** ID del cliente autenticado; se conserva como referencia, no como dato controlado por la petición. */
     @Column(name = "id_cliente", nullable = false)
-    private Long idCliente;
+    private Integer idCliente;
 
     /** ID del empleado que eventualmente atienda el pedido; puede ser nulo al crearlo. */
     @Column(name = "id_empleado")
-    private Long idEmpleado;
+    private Integer idEmpleado;
 
     /** Asociación obligatoria al restaurante que prepara el pedido. */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -52,7 +52,7 @@ public class Pedido {
 
     /** Total calculado por el servicio usando precios persistidos y aritmética con detección de overflow. */
     @Column(nullable = false)
-    private Long total;
+    private Integer total;
 
     /** Las líneas se guardan y eliminan junto con la cabecera; la lista refleja el lado inverso de la relación. */
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -63,7 +63,7 @@ public class Pedido {
     }
 
     /** Crea el pedido con estado PENDIENTE y fija la fecha inicial del ciclo de vida. */
-    public Pedido(Long idCliente, Restaurante restaurante, Long total) {
+    public Pedido(Integer idCliente, Restaurante restaurante, Integer total) {
         this.idCliente = idCliente;
         this.restaurante = restaurante;
         this.total = total;
@@ -77,13 +77,13 @@ public class Pedido {
         detalle.asociarPedido(this);
     }
 
-    public Long getId() { return id; }
-    public Long getIdCliente() { return idCliente; }
-    public Long getIdEmpleado() { return idEmpleado; }
+    public Integer getId() { return id; }
+    public Integer getIdCliente() { return idCliente; }
+    public Integer getIdEmpleado() { return idEmpleado; }
     public Restaurante getRestaurante() { return restaurante; }
     public EstadoPedido getEstado() { return estado; }
     public LocalDateTime getFechaCreacion() { return fechaCreacion; }
-    public Long getTotal() { return total; }
+    public Integer getTotal() { return total; }
     /** Devuelve una copia no modificable para evitar que consumidores externos alteren la colección interna. */
     public List<DetallePedido> getDetalles() { return List.copyOf(detalles); }
 }

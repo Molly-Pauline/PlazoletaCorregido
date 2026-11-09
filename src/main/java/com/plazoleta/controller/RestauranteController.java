@@ -12,13 +12,11 @@ import com.plazoleta.service.PlatoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
-import com.plazoleta.security.InternalServiceTokenVerifier;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.plazoleta.security.AuthenticatedUser;
-import com.plazoleta.security.InternalServiceTokenVerifier;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,15 +33,11 @@ public class RestauranteController {
     private final RestauranteService restauranteService;
     /** Consulta el menú de platos que pertenece a un restaurante. */
     private final PlatoService platoService;
-    /** Valida el secreto de servicio para el endpoint interno de comprobación de propiedad. */
-    private final InternalServiceTokenVerifier internalServiceTokenVerifier;
 
     /** Inyecta los servicios de dominio y el verificador interno. */
-    public RestauranteController(RestauranteService restauranteService, PlatoService platoService,
-                                 InternalServiceTokenVerifier internalServiceTokenVerifier) {
+    public RestauranteController(RestauranteService restauranteService, PlatoService platoService) {
         this.restauranteService = restauranteService;
         this.platoService = platoService;
-        this.internalServiceTokenVerifier = internalServiceTokenVerifier;
     }
 
     /** Registra un restaurante después de validar datos y propietario en el servicio.
@@ -77,30 +71,11 @@ public class RestauranteController {
      * @return página de platos activos que cumplen el filtro
      */
     @GetMapping("/{idRestaurante}/platos")
-    public Page<PlatoResponse> listarMenu(@PathVariable Long idRestaurante,
+    public Page<PlatoResponse> listarMenu(@PathVariable Integer idRestaurante,
                                          @RequestParam(required = false) String categoria,
                                          @RequestParam(defaultValue = "0") int page,
                                          @RequestParam(defaultValue = "10") int size) {
         return platoService.listarMenu(idRestaurante, categoria, page, size);
     }
 
-    /** Confirma a Usuarios que el propietario del token coincide con la relación persistida del restaurante.
-     * @param idRestaurante restaurante cuya propiedad se consulta
-     * @param idPropietario ID que Usuarios espera validar
-     * @param user identidad del propietario tomada del JWT verificado
-     * @param serviceToken credencial interna que autentica la llamada entre microservicios
-     * @return true solo cuando identidad solicitada y propietario persistido coinciden
-     */
-    @GetMapping("/{idRestaurante}/propietario/{idPropietario}")
-    public boolean perteneceAPropietario(@PathVariable Long idRestaurante, @PathVariable Long idPropietario,
-                                         @AuthenticationPrincipal AuthenticatedUser user,
-                                         @RequestHeader(value = "X-Service-Token", required = false) String serviceToken) {
-        // Este endpoint entre servicios requiere una credencial interna además del Bearer de propietario.
-        if (!internalServiceTokenVerifier.isValid(serviceToken)) {
-            throw new DomainException(HttpStatus.UNAUTHORIZED, "Autenticacion de servicio requerida");
-        }
-        // Se comprueban las tres condiciones: principal presente, ID firmado coincidente y relación persistida.
-        return user != null && user.idUsuario().equals(idPropietario)
-                && restauranteService.perteneceAPropietario(idRestaurante, idPropietario);
-    }
 }

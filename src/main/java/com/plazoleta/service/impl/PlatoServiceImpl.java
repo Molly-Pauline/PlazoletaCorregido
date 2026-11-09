@@ -47,7 +47,7 @@ public class PlatoServiceImpl implements PlatoService {
 
     /** Actualiza solo precio y descripción; nombre, categoría e imagen permanecen intactos (HU4). */
     @Transactional
-    public Plato modificar(Long idPlato, PlatoUpdateRequest request, AuthenticatedUser user) {
+    public Plato modificar(Integer idPlato, PlatoUpdateRequest request, AuthenticatedUser user) {
         // La propiedad se obtiene desde la relación persistida del plato, no desde datos enviados por el cliente.
         Plato plato = platoRepository.findById(idPlato)
                 .orElseThrow(() -> new DomainException(HttpStatus.BAD_REQUEST, "El plato no existe"));
@@ -59,7 +59,7 @@ public class PlatoServiceImpl implements PlatoService {
 
     /** Activa o desactiva un plato del restaurante del propietario autenticado (HU7). */
     @Transactional
-    public Plato cambiarEstado(Long idPlato, PlatoEstadoRequest request, AuthenticatedUser user) {
+    public Plato cambiarEstado(Integer idPlato, PlatoEstadoRequest request, AuthenticatedUser user) {
         // Resolver el plato permite derivar su restaurante y proteger la pertenencia del recurso concreto.
         Plato plato = platoRepository.findById(idPlato)
                 .orElseThrow(() -> new DomainException(HttpStatus.BAD_REQUEST, "El plato no existe"));
@@ -71,7 +71,7 @@ public class PlatoServiceImpl implements PlatoService {
 
     /** Devuelve el menú visible, opcionalmente filtrado por categoría y dividido en páginas (HU10). */
     @Transactional(readOnly = true)
-    public Page<PlatoResponse> listarMenu(Long idRestaurante, String categoria, int page, int size) {
+    public Page<PlatoResponse> listarMenu(Integer idRestaurante, String categoria, int page, int size) {
         // La cota superior y el mínimo positivo evitan parámetros de paginación inválidos o costosos.
         if (page < 0 || size < 1 || size > 100) {
             throw new DomainException(HttpStatus.BAD_REQUEST, "Paginacion invalida: size debe estar entre 1 y 100");

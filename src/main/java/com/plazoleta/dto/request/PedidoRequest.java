@@ -10,7 +10,7 @@ import java.util.List;
 /** Contrato de entrada de HU11: un restaurante y al menos una línea válida de platos. */
 public record PedidoRequest(
                             // Identifica el destino del pedido; el servicio verifica que exista.
-                            @NotNull @Positive Long idRestaurante,
+                            @NotNull @Positive Integer idRestaurante,
                             // Cada elemento también se valida para aplicar las restricciones de PedidoDetalleRequest.
                             @NotEmpty List<@Valid PedidoDetalleRequest> platos) {
 }

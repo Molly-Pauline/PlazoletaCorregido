@@ -55,7 +55,7 @@ public class PlatoController {
      * @return respuesta con el plato actualizado
      */
     @PutMapping("/{idPlato}")
-    public PlatoApiResponse modificar(@PathVariable Long idPlato, @Valid @RequestBody PlatoUpdateRequest request,
+    public PlatoApiResponse modificar(@PathVariable Integer idPlato, @Valid @RequestBody PlatoUpdateRequest request,
                                       @AuthenticationPrincipal AuthenticatedUser user) {
         // El principal contiene la identidad autenticada que el servicio compara con el dueño del restaurante.
         Plato plato = platoService.modificar(idPlato, request, user);
@@ -69,7 +69,7 @@ public class PlatoController {
      * @return respuesta con el estado actualizado del plato
      */
     @PatchMapping("/{idPlato}/estado")
-    public PlatoApiResponse cambiarEstado(@PathVariable Long idPlato, @Valid @RequestBody PlatoEstadoRequest request,
+    public PlatoApiResponse cambiarEstado(@PathVariable Integer idPlato, @Valid @RequestBody PlatoEstadoRequest request,
                                           @AuthenticationPrincipal AuthenticatedUser user) {
         Plato plato = platoService.cambiarEstado(idPlato, request, user);
         return new PlatoApiResponse(true, "Estado del plato actualizado", PlatoResponse.from(plato));

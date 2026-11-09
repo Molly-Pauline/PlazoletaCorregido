@@ -25,22 +25,22 @@ class RestauranteServiceTest {
     private final RestauranteServiceImpl service = new RestauranteServiceImpl(repository, usuarioValidation);
     /** Solicitud representativa reutilizada por los escenarios positivos y negativos. */
     private final RestauranteRequest request = new RestauranteRequest(
-            "La Casona", "123456789", "Calle 123", "+573001234567", "https://example.com/logo.png", 10L);
+            "La Casona", "123456789", "Calle 123", "+573001234567", "https://example.com/logo.png", 10);
 
     /** Guarda solo después de verificar que Usuarios reconoce al ID como propietario válido. */
     @Test
     void createsRestaurantOnlyAfterValidatingOwner() {
         // El NIT está disponible y la dependencia externa confirma el rol PROPIETARIO.
         when(repository.existsByNit(request.nit())).thenReturn(false);
-        when(usuarioValidation.existePropietarioValido(10L)).thenReturn(true);
+        when(usuarioValidation.existePropietarioValido(10)).thenReturn(true);
         when(repository.save(any(Restaurante.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Restaurante created = service.crear(request);
 
         // Se comprueban datos guardados y la interacción que demuestra la llamada de validación.
         assertEquals("La Casona", created.getNombre());
-        assertEquals(10L, created.getIdPropietario());
-        verify(usuarioValidation).existePropietarioValido(10L);
+        assertEquals(10, created.getIdPropietario());
+        verify(usuarioValidation).existePropietarioValido(10);
     }
 
     /** Un NIT duplicado se rechaza antes de realizar la llamada de red a Usuarios. */
@@ -60,7 +60,7 @@ class RestauranteServiceTest {
     void rejectsUnknownOrNonOwnerUser() {
         // NIT disponible pero respuesta negativa de Usuarios debe impedir guardar.
         when(repository.existsByNit(request.nit())).thenReturn(false);
-        when(usuarioValidation.existePropietarioValido(10L)).thenReturn(false);
+        when(usuarioValidation.existePropietarioValido(10)).thenReturn(false);
 
         // El rechazo se representa como error de dominio y no debe generar inserción alguna.
         assertThrows(DomainException.class, () -> service.crear(request));
