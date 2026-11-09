@@ -190,6 +190,17 @@ public class PedidoServiceImpl implements PedidoService {
         return PedidoResponse.from(pedido);
     }
 
+    /** Cancela un pedido propio; el State rechaza cualquier estado distinto de pendiente (HU16). */
+    @Override
+    @Transactional
+    public PedidoResponse cancelar(Integer idPedido, AuthenticatedUser cliente) {
+        Pedido pedido = pedidoRepository.findByIdParaActualizar(idPedido).orElseThrow(this::pedidoNoEncontrado);
+        verificarDueno(pedido, cliente);
+        EstadoPedido anterior = pedido.getEstado();
+        pedido.cancelar();
+        return PedidoResponse.from(pedido);
+    }
+
     /** Carga el pedido bloqueando su fila y exige que pertenezca al restaurante firmado en el token del empleado. */
     private Pedido obtenerDelRestaurante(Integer idPedido, AuthenticatedUser empleado) {
         if (empleado == null || !"EMPLEADO".equals(empleado.rol()) || empleado.idRestaurante() == null) {
@@ -200,6 +211,13 @@ public class PedidoServiceImpl implements PedidoService {
             throw new DomainException(HttpStatus.FORBIDDEN, "El pedido no pertenece al restaurante del empleado");
         }
         return pedido;
+    }
+
+    /** Impide que un cliente gestione o consulte pedidos de otra persona. */
+    private void verificarDueno(Pedido pedido, AuthenticatedUser cliente) {
+        if (cliente == null || !pedido.getIdCliente().equals(cliente.idUsuario())) {
+            throw new DomainException(HttpStatus.FORBIDDEN, "El pedido no pertenece al cliente autenticado");
+        }
     }
 
     /** Obtiene el celular de destino del SMS. */
