@@ -7,6 +7,7 @@ import com.plazoleta.entity.Pedido;
 import com.plazoleta.entity.Plato;
 import com.plazoleta.entity.Restaurante;
 import com.plazoleta.exception.DomainException;
+import com.plazoleta.repository.HistorialPedidoRepository;
 import com.plazoleta.repository.PedidoRepository;
 import com.plazoleta.repository.PlatoRepository;
 import com.plazoleta.repository.RestauranteRepository;
@@ -41,7 +42,7 @@ class PedidoServiceTest {
         private final PedidoCreationLock orderCreationLock = mock(PedidoCreationLock.class);
         private final PedidoServiceImpl service = new PedidoServiceImpl(
             pedidoRepository, platoRepository, restauranteRepository, orderCreationLock,
-            mock(UsuarioRepository.class),
+            mock(HistorialPedidoRepository.class), mock(UsuarioRepository.class),
             mock(PasswordEncoder.class), mock(NotificacionSmsService.class));
     /** Principal autenticado usado para representar al cliente que solicita el pedido. */
     private final AuthenticatedUser customer = new AuthenticatedUser(25, "CLIENTE");

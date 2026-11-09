@@ -4,6 +4,7 @@ import com.plazoleta.dto.request.EntregaPedidoRequest;
 import com.plazoleta.dto.request.PedidoRequest;
 import com.plazoleta.dto.response.PedidoApiResponse;
 import com.plazoleta.dto.response.PedidoResponse;
+import com.plazoleta.dto.response.TrazabilidadResponse;
 import com.plazoleta.entity.EstadoPedido;
 import com.plazoleta.security.AuthenticatedUser;
 import com.plazoleta.service.PedidoService;
@@ -20,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 /** Expone los endpoints HTTP de creación y consulta de pedidos. */
 @RestController
@@ -87,4 +90,10 @@ public class PedidoController {
         return new PedidoApiResponse(true, "Pedido cancelado", pedidoService.cancelar(idPedido, user));
     }
 
+    /** HU17: el cliente consulta los cambios de estado de su pedido. */
+    @GetMapping("/{idPedido}/trazabilidad")
+    public List<TrazabilidadResponse> consultarTrazabilidad(@PathVariable Integer idPedido,
+                                                            @AuthenticationPrincipal AuthenticatedUser user) {
+        return pedidoService.consultarTrazabilidad(idPedido, user);
+    }
 }
