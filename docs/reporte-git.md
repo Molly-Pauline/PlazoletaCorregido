@@ -16,6 +16,11 @@ El repositorio local debe conservar estas ramas:
 | `feature/HU-10-listar-platos-restaurante` | HU10, menú paginado filtrable por categoría. |
 | `feature/HU-11-realizar-pedido` | HU11, crear pedido de un restaurante. |
 | `feature/HU-12-listar-pedidos-empleado` | HU12, filtro de pedidos del restaurante del empleado. |
+| `feature/HU-13-asignar-pedido` | HU13, asignación del empleado y paso a preparación. |
+| `feature/HU-14-notificar-pedido-listo` | HU14, pedido listo y PIN por SMS. |
+| `feature/HU-15-entregar-pedido` | HU15, entrega con PIN. |
+| `feature/HU-16-cancelar-pedido` | HU16, cancelación de pedidos pendientes. |
+| `feature/HU-17-trazabilidad-pedido` | HU17, registro y consulta de cambios de estado. |
 | `release/sprint-1` | Candidato de release del sprint. |
 
 Cada feature y la rama de release se crea desde `develop`. Las ramas se mantienen locales; no se configura remoto ni se publican cambios automáticamente. HU1, HU5, HU6 y HU8 pertenecen al repositorio Usuarios; HU2-HU4 y HU7-HU12 pertenecen a Plazoleta. HU13-HU18 están fuera del alcance actual.

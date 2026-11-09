@@ -1,19 +1,15 @@
-# Contrato de integración con Usuarios
+# Validaciones de usuarios
 
-HU2 exige comprobar que `idPropietario` existe y su rol es `PROPIETARIO`. El servicio Usuarios implementa el endpoint de validación descrito abajo. HU6 valida propiedad del restaurante mediante una consulta autenticada desde Usuarios hacia Plazoleta.
+Cuentas y restaurantes viven en la misma aplicación, así que estas validaciones son llamadas a servicios locales y no existe un contrato HTTP entre servicios.
 
-## Endpoint requerido
+## Propietario de un restaurante (HU2)
 
-`GET /api/v1/usuarios/{id}/validacion-propietario`
+HU2 exige que `idPropietario` exista y tenga rol `PROPIETARIO`. `LocalUsuarioValidationAdapter` lo comprueba en la tabla `usuario`. Si no se cumple, `POST /restaurantes` responde `400` y no crea el restaurante.
 
-- `200` con cuerpo JSON `true`: el usuario existe y su rol es `PROPIETARIO`.
-- `200` con cuerpo JSON `false` o `404`: no es un propietario válido.
-- Errores de red/servidor: Plazoleta responde `503` y no crea el restaurante.
+## Restaurante de un empleado (HU6)
 
-Plazoleta configura host y ruta mediante `USUARIOS_BASE_URL` y `USUARIOS_OWNER_VALIDATION_PATH`. Las pruebas unitarias sustituyen el puerto con un mock. Ningún servicio lee directamente la base de datos privada del otro.
+`POST /api/v1/usuarios/empleados` exige rol `PROPIETARIO` e `idRol` igual a `3` (`EMPLEADO`). `LocalOwnershipValidator` confirma que el restaurante pertenece al propietario autenticado; si no es así, responde `403`. Al crear el empleado, la relación se guarda en `empleado_restaurante`.
 
-## Validar restaurante para crear empleado (HU6)
+## Identidad (HU5)
 
-Usuarios reenvía el Bearer del propietario a `GET /restaurantes/{idRestaurante}/propietario/{idPropietario}` en Plazoleta. Plazoleta exige rol `PROPIETARIO`, compara el propietario del token con el identificador solicitado y confirma la relación persistida. Solo con respuesta `true` Usuarios crea la cuenta del empleado asociada al restaurante.
-
-HU5 debe emitir JWT estándar firmado con HS256. El contrato compartido incluye `sub` (ID de usuario numérico), `rol`, `exp` (Unix epoch seconds) y, para empleados, `idRestaurante`. Usuarios y Plazoleta deben usar el mismo `AUTH_SECRET` de al menos 32 bytes UTF-8. Plazoleta valida firma y expiración antes de construir la identidad; usa el `idRestaurante` firmado para limitar HU12 y no acepta un ID de restaurante desde el query string.
+El login emite un JWT HS256 con `sub`, `rol`, `exp` y, para empleados, `idRestaurante`. El rol y el restaurante se leen de ese token verificado, nunca de un dato enviado por el cliente.
