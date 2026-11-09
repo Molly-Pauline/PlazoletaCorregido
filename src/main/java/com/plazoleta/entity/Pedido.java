@@ -1,5 +1,7 @@
 package com.plazoleta.entity;
 
+import com.plazoleta.entity.estado.PedidoState;
+import com.plazoleta.entity.estado.PedidoStates;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -75,6 +77,17 @@ public class Pedido {
     public void agregarDetalle(DetallePedido detalle) {
         detalles.add(detalle);
         detalle.asociarPedido(this);
+    }
+
+    /** HU13: el State valida la transición y luego se registra al empleado responsable. */
+    public void asignarEmpleado(Integer idEmpleado) {
+        this.estado = estadoActual().asignar();
+        this.idEmpleado = idEmpleado;
+    }
+
+    /** Traduce el valor persistido al objeto que implementa las reglas de ese estado. */
+    private PedidoState estadoActual() {
+        return PedidoStates.de(estado);
     }
 
     public Integer getId() { return id; }

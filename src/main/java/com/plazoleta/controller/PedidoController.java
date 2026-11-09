@@ -11,6 +11,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -57,6 +59,12 @@ public class PedidoController {
                                        @RequestParam(defaultValue = "10") int size,
                                        @AuthenticationPrincipal AuthenticatedUser user) {
         return pedidoService.listarPorEstado(estado, page, size, user);
+    }
+
+    /** HU13: el empleado se asigna el pedido y este pasa a preparación. */
+    @PatchMapping("/{idPedido}/asignar")
+    public PedidoApiResponse asignar(@PathVariable Integer idPedido, @AuthenticationPrincipal AuthenticatedUser user) {
+        return new PedidoApiResponse(true, "Pedido asignado", pedidoService.asignar(idPedido, user));
     }
 
 }
