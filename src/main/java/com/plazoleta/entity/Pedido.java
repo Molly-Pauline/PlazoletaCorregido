@@ -95,6 +95,12 @@ public class Pedido {
         this.pinHash = pinHash;
     }
 
+    /** HU15: al cerrar el pedido, el PIN deja de ser necesario. */
+    public void entregar() {
+        this.estado = estadoActual().entregar();
+        this.pinHash = null;
+    }
+
     /** Traduce el valor persistido al objeto que implementa las reglas de ese estado. */
     private PedidoState estadoActual() {
         return PedidoStates.de(estado);

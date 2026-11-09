@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -32,7 +33,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/** Pruebas de HU13 y HU14: asignación, pedido listo y PIN. */
+/** Pruebas de HU13 a HU15: ciclo del pedido y PIN. */
 class PedidoCicloServiceTest {
 
     private static final int ID_PEDIDO = 5;
@@ -96,6 +97,49 @@ class PedidoCicloServiceTest {
         assertThrows(DomainException.class, () -> service.marcarListo(ID_PEDIDO, empleado));
 
         verify(sms, never()).enviar(any(), any());
+    }
+
+    @Test
+    void hu15EntregaConElPinCorrecto() {
+        pedido.asignarEmpleado(30);
+        service.marcarListo(ID_PEDIDO, empleado);
+
+        var respuesta = service.entregar(ID_PEDIDO, pinEnviado(), empleado);
+
+        assertEquals("ENTREGADO", respuesta.estado());
+        assertNull(pedido.getPinHash());
+    }
+
+    @Test
+    void hu15RechazaUnPinIncorrecto() {
+        pedido.asignarEmpleado(30);
+        service.marcarListo(ID_PEDIDO, empleado);
+        String incorrecto = pinEnviado().equals("000000") ? "000001" : "000000";
+
+        DomainException error = assertThrows(DomainException.class,
+                () -> service.entregar(ID_PEDIDO, incorrecto, empleado));
+
+        assertEquals(HttpStatus.BAD_REQUEST, error.getStatus());
+        assertEquals(EstadoPedido.LISTO, pedido.getEstado());
+    }
+
+    @Test
+    void hu15SoloEntregaPedidosListos() {
+        DomainException error = assertThrows(DomainException.class,
+                () -> service.entregar(ID_PEDIDO, "123456", empleado));
+
+        assertEquals(HttpStatus.CONFLICT, error.getStatus());
+    }
+
+    @Test
+    void hu15UnPedidoEntregadoNoCambiaDeEstado() {
+        pedido.asignarEmpleado(30);
+        pedido.marcarListo("hash");
+        pedido.entregar();
+
+        assertThrows(DomainException.class, () -> service.asignar(ID_PEDIDO, empleado));
+        assertThrows(DomainException.class, () -> service.marcarListo(ID_PEDIDO, empleado));
+        assertEquals(EstadoPedido.ENTREGADO, pedido.getEstado());
     }
 
     /** Lee del SMS capturado el PIN de seis dígitos que recibió el cliente. */

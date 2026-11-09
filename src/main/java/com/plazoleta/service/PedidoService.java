@@ -20,4 +20,7 @@ public interface PedidoService {
     /** HU14: marca el pedido como listo y envía el PIN al cliente por SMS. */
     PedidoResponse marcarListo(Integer idPedido, AuthenticatedUser empleado);
 
+    /** HU15: entrega el pedido después de comprobar el PIN. */
+    PedidoResponse entregar(Integer idPedido, String pin, AuthenticatedUser empleado);
+
 }

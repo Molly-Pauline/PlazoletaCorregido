@@ -1,5 +1,6 @@
 package com.plazoleta.controller;
 
+import com.plazoleta.dto.request.EntregaPedidoRequest;
 import com.plazoleta.dto.request.PedidoRequest;
 import com.plazoleta.dto.response.PedidoApiResponse;
 import com.plazoleta.dto.response.PedidoResponse;
@@ -71,6 +72,13 @@ public class PedidoController {
     @PatchMapping("/{idPedido}/listo")
     public PedidoApiResponse marcarListo(@PathVariable Integer idPedido, @AuthenticationPrincipal AuthenticatedUser user) {
         return new PedidoApiResponse(true, "Pedido listo; PIN enviado al cliente", pedidoService.marcarListo(idPedido, user));
+    }
+
+    /** HU15: el empleado digita el PIN para cerrar el pedido. */
+    @PatchMapping("/{idPedido}/entregar")
+    public PedidoApiResponse entregar(@PathVariable Integer idPedido, @Valid @RequestBody EntregaPedidoRequest request,
+                                      @AuthenticationPrincipal AuthenticatedUser user) {
+        return new PedidoApiResponse(true, "Pedido entregado", pedidoService.entregar(idPedido, request.pin(), user));
     }
 
 }
