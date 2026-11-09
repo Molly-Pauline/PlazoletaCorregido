@@ -39,6 +39,8 @@ public class SecurityConfig {
                 }))
             .authorizeHttpRequests(a -> a
                 .requestMatchers("/actuator/health").permitAll()
+                // Documentación OpenAPI: solo describe las rutas; cada ruta conserva sus propios permisos.
+                .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/usuarios/login", "/api/v1/usuarios/clientes", "/api/v1/usuarios/administradores").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/usuarios/registro", "/api/v1/usuarios/propietarios").hasRole("ADMINISTRADOR")
                 .requestMatchers(HttpMethod.POST, "/api/v1/usuarios/empleados").hasRole("PROPIETARIO")
