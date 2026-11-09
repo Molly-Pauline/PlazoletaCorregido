@@ -8,6 +8,9 @@ import com.plazoleta.dto.response.RestauranteListadoResponse;
 import com.plazoleta.dto.response.PlatoResponse;
 import com.plazoleta.service.RestauranteService;
 import com.plazoleta.service.PlatoService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,6 +28,8 @@ import java.util.List;
 /** Publica operaciones de restaurantes y consulta del menú de platos. */
 @RestController
 @RequestMapping("/restaurantes")
+@Tag(name = "Restaurantes", description = "Restaurantes, menú y búsqueda de platos (HU2, HU9 y HU10)")
+@SecurityRequirement(name = "bearerAuth")
 public class RestauranteController {
 
     /** Reglas de creación, listado y comprobación de propiedad de restaurantes. */
@@ -42,6 +47,7 @@ public class RestauranteController {
      * @param request datos del restaurante y referencia del propietario por validar
      * @return envoltorio de éxito con los datos públicos del restaurante creado
      */
+    @Operation(summary = "HU2 - Crear restaurante", description = "Requiere rol ADMINISTRADOR.")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public RestauranteApiResponse crear(@Valid @RequestBody RestauranteRequest request) {
@@ -55,6 +61,7 @@ public class RestauranteController {
      * @param size cantidad solicitada, limitada por el servicio
      * @return página con la proyección pública reducida de cada restaurante
      */
+    @Operation(summary = "HU9 - Listar restaurantes", description = "Requiere rol CLIENTE. Orden alfabético y paginado.")
     @GetMapping
     public Page<RestauranteListadoResponse> listar(@RequestParam(defaultValue = "0") int page,
                                                    @RequestParam(defaultValue = "10") int size) {
@@ -68,6 +75,7 @@ public class RestauranteController {
      * @param size cantidad de platos por página
      * @return página de platos activos que cumplen el filtro
      */
+    @Operation(summary = "HU10 - Listar el menú de un restaurante", description = "Requiere rol CLIENTE. Paginado y con filtro opcional por categoría.")
     @GetMapping("/{idRestaurante}/platos")
     public Page<PlatoResponse> listarMenu(@PathVariable Integer idRestaurante,
                                          @RequestParam(required = false) String categoria,
@@ -81,6 +89,7 @@ public class RestauranteController {
      * @param nombre texto inicial del nombre, sin distinguir mayúsculas ni tildes
      * @return platos activos que coinciden, ordenados por nombre
      */
+    @Operation(summary = "Buscar platos por nombre", description = "Requiere rol CLIENTE. Usa merge sort y búsqueda binaria; ignora mayúsculas y tildes.")
     @GetMapping("/{idRestaurante}/platos/buscar")
     public List<PlatoResponse> buscarEnMenu(@PathVariable Integer idRestaurante,
                                             @RequestParam(required = false) String nombre) {

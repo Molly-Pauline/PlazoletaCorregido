@@ -8,6 +8,9 @@ import com.plazoleta.dto.response.PlatoResponse;
 import com.plazoleta.dto.request.PlatoUpdateRequest;
 import com.plazoleta.security.AuthenticatedUser;
 import com.plazoleta.service.PlatoService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,6 +26,8 @@ import org.springframework.web.bind.annotation.RestController;
 /** Adapta las operaciones HTTP de platos a los servicios de negocio. */
 @RestController
 @RequestMapping("/platos")
+@Tag(name = "Platos", description = "Gestión de platos por el propietario (HU3, HU4 y HU7)")
+@SecurityRequirement(name = "bearerAuth")
 public class PlatoController {
 
     /** Servicio que aplica pertenencia del propietario y reglas HU3, HU4 y HU7. */
@@ -38,6 +43,7 @@ public class PlatoController {
      * @param user principal autenticado cuyo rol y propiedad confirma el servicio
      * @return respuesta con el DTO público del plato creado
      */
+    @Operation(summary = "HU3 - Crear plato", description = "Requiere rol PROPIETARIO del restaurante.")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PlatoApiResponse crear(@Valid @RequestBody PlatoRequest request,
@@ -54,6 +60,7 @@ public class PlatoController {
      * @param user propietario autenticado que debe controlar el restaurante del plato
      * @return respuesta con el plato actualizado
      */
+    @Operation(summary = "HU4 - Modificar plato", description = "Requiere rol PROPIETARIO. Solo cambia precio y descripción.")
     @PutMapping("/{idPlato}")
     public PlatoApiResponse modificar(@PathVariable Integer idPlato, @Valid @RequestBody PlatoUpdateRequest request,
                                       @AuthenticationPrincipal AuthenticatedUser user) {
@@ -68,6 +75,7 @@ public class PlatoController {
      * @param user propietario autenticado que debe controlar el restaurante del plato
      * @return respuesta con el estado actualizado del plato
      */
+    @Operation(summary = "HU7 - Habilitar o deshabilitar plato", description = "Requiere rol PROPIETARIO.")
     @PatchMapping("/{idPlato}/estado")
     public PlatoApiResponse cambiarEstado(@PathVariable Integer idPlato, @Valid @RequestBody PlatoEstadoRequest request,
                                           @AuthenticationPrincipal AuthenticatedUser user) {
