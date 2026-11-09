@@ -28,9 +28,9 @@ class CatalogRepositoryTest {
     void restaurantPagesAreAlphabeticalAndExposeOnlyNameAndLogo() {
                 // Se guardan nombres fuera de orden para distinguir la ordenación de la secuencia de inserción.
         Restaurante zulu = restauranteRepository.save(new Restaurante("Zulu", "9001", "Calle 1", "3001234567",
-                "https://example.com/zulu.png", 1L));
+                "https://example.com/zulu.png", 1));
         Restaurante alfa = restauranteRepository.save(new Restaurante("Alfa", "9002", "Calle 2", "3001234568",
-                "https://example.com/alfa.png", 2L));
+                "https://example.com/alfa.png", 2));
         // flush envía las inserciones a H2 antes de ejecutar la consulta paginada.
         restauranteRepository.flush();
 
@@ -53,7 +53,7 @@ class CatalogRepositoryTest {
     void menuPagesFilterByCategoryAndExcludeDisabledDishes() {
                 // El menú contiene un plato activo de la categoría buscada y otro activo de una categoría diferente.
         Restaurante restaurant = restauranteRepository.save(new Restaurante("La Casona", "9010", "Calle 3",
-                "3001234569", "https://example.com/logo.png", 10L));
+                "3001234569", "https://example.com/logo.png", 10));
         Plato burger = platoRepository.save(new Plato("Hamburguesa", 25000, "Queso", "https://example.com/a.png",
                 "Hamburguesas", restaurant));
         platoRepository.save(new Plato("Gaseosa", 5000, "Fria", "https://example.com/b.png",

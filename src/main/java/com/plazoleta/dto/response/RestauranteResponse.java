@@ -12,8 +12,8 @@ import com.plazoleta.entity.Restaurante;
  * @param urlLogo URL de la imagen del restaurante
  * @param idPropietario referencia al propietario validado en Usuarios
  */
-public record RestauranteResponse(Long id, String nombre, String nit, String direccion, String telefono,
-                                  String urlLogo, Long idPropietario) {
+public record RestauranteResponse(Integer id, String nombre, String nit, String direccion, String telefono,
+                                  String urlLogo, Integer idPropietario) {
     /** Proyecta los campos escalares de la entidad sin exponer detalles internos de persistencia. */
     public static RestauranteResponse from(Restaurante restaurante) {
         return new RestauranteResponse(restaurante.getId(), restaurante.getNombre(), restaurante.getNit(),

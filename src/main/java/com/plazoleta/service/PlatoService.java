@@ -14,11 +14,12 @@ public interface PlatoService {
     Plato crear(PlatoRequest request, AuthenticatedUser user);
 
     /** Cambia exclusivamente precio y descripción de un plato autorizado. */
-    Plato modificar(Long idPlato, PlatoUpdateRequest request, AuthenticatedUser user);
+    Plato modificar(Integer idPlato, PlatoUpdateRequest request, AuthenticatedUser user);
 
     /** Cambia la disponibilidad de un plato autorizado. */
-    Plato cambiarEstado(Long idPlato, PlatoEstadoRequest request, AuthenticatedUser user);
+    Plato cambiarEstado(Integer idPlato, PlatoEstadoRequest request, AuthenticatedUser user);
 
     /** Lista el menú activo con filtro opcional de categoría y paginación. */
-    Page<PlatoResponse> listarMenu(Long idRestaurante, String categoria, int page, int size);
+    Page<PlatoResponse> listarMenu(Integer idRestaurante, String categoria, int page, int size);
+
 }

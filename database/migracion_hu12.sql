@@ -1,0 +1,16 @@
+-- EJECUTAR SOLO DESPUÉS DE REALIZAR UN RESPALDO DE plazoleta_bd.
+-- Revisar primero los nombres exactos de las columnas (pueden variar por naming strategy).
+-- SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+-- WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuario';
+-- La tabla empleado_restaurante se crea automáticamente con Hibernate ddl-auto=update.
+-- Antes de borrar la columna vieja, trasladar sus relaciones:
+-- AJUSTAR nombres de columna según el resultado anterior.
+-- INSERT INTO empleado_restaurante (id_usuario, id_restaurante)
+-- SELECT id, idRestaurante FROM usuario
+-- WHERE rol = 'EMPLEADO' AND idRestaurante IS NOT NULL
+-- ON DUPLICATE KEY UPDATE id_restaurante = VALUES(id_restaurante);
+-- Validar: SELECT * FROM empleado_restaurante;
+-- Solo después de comprobar datos y hacer respaldo:
+-- ALTER TABLE usuario DROP COLUMN idRestaurante;
+-- Para DocIdentidad: comparar con documento antes de borrar o copiar datos.
+-- NO ejecutar DROP COLUMN DocIdentidad sin verificar que no haya datos exclusivos.

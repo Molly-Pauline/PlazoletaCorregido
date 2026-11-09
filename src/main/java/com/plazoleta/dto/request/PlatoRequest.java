@@ -18,5 +18,5 @@ public record PlatoRequest(
         // La categoría es obligatoria y se usa como filtro del menú.
         @NotBlank String categoria,
         // El restaurante debe existir; la autorización por propiedad se verifica en el servicio.
-        @NotNull @Positive Long idRestaurante) {
+        @NotNull @Positive Integer idRestaurante) {
 }

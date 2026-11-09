@@ -10,7 +10,7 @@ import com.plazoleta.entity.DetallePedido;
  * @param cantidad unidades incluidas en la línea
  * @param precioUnitario precio capturado al crear el pedido, no el precio actual del catálogo
  */
-public record PedidoDetalleResponse(Long id, Long idPlato, String nombrePlato, Integer cantidad,
+public record PedidoDetalleResponse(Integer id, Integer idPlato, String nombrePlato, Integer cantidad,
                                    Integer precioUnitario) {
     /** Convierte la entidad de detalle a datos de respuesta sin exponer asociaciones JPA. */
     public static PedidoDetalleResponse from(DetallePedido detalle) {

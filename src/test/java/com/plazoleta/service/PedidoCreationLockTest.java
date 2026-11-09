@@ -31,10 +31,10 @@ class PedidoCreationLockTest {
 
         try {
             // El primer Handle mantiene el bloqueo mientras el segundo intento queda pendiente.
-            try (PedidoCreationLock.Handle first = lock.acquire(15L)) {
+            try (PedidoCreationLock.Handle first = lock.acquire(15)) {
                 var second = executor.submit(() -> {
                     secondStarted.countDown();
-                    try (PedidoCreationLock.Handle ignored = lock.acquire(15L)) {
+                    try (PedidoCreationLock.Handle ignored = lock.acquire(15)) {
                         secondAcquired.countDown();
                     }
                 });
@@ -67,12 +67,12 @@ class PedidoCreationLockTest {
         try {
             // El candado se adquiere dentro de una transacción todavía abierta.
             transaction.executeWithoutResult(status -> {
-                PedidoCreationLock.Handle handle = lock.acquire(22L);
+                PedidoCreationLock.Handle handle = lock.acquire(22);
                 // El cierre programa la liberación para después de completar la transacción.
                 handle.close();
                 // Otra solicitud intenta tomar el mismo candado antes de terminar la transacción actual.
                 executor.submit(() -> {
-                    try (PedidoCreationLock.Handle ignored = lock.acquire(22L)) {
+                    try (PedidoCreationLock.Handle ignored = lock.acquire(22)) {
                         competingRequestAcquired.countDown();
                     }
                 });

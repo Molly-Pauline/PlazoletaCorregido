@@ -40,7 +40,7 @@ class PedidoServiceTest {
         private final PedidoServiceImpl service = new PedidoServiceImpl(
             pedidoRepository, platoRepository, restauranteRepository, orderCreationLock);
     /** Principal autenticado usado para representar al cliente que solicita el pedido. */
-    private final AuthenticatedUser customer = new AuthenticatedUser(25L, "CLIENTE");
+    private final AuthenticatedUser customer = new AuthenticatedUser(25, "CLIENTE");
 
     /** Calcula el total usando el precio persistido y crea una orden pendiente de un solo restaurante. */
     @Test
@@ -48,23 +48,23 @@ class PedidoServiceTest {
         // Los mocks representan las entidades y respuestas que los repositorios cargarían desde la base.
         Restaurante restaurant = mock(Restaurante.class);
         Plato dish = mock(Plato.class);
-        when(restaurant.getId()).thenReturn(1L);
-        when(dish.getId()).thenReturn(8L);
+        when(restaurant.getId()).thenReturn(1);
+        when(dish.getId()).thenReturn(8);
         when(dish.getPrecio()).thenReturn(25000);
         when(dish.isActivo()).thenReturn(true);
         when(dish.getRestaurante()).thenReturn(restaurant);
-        when(restauranteRepository.findById(1L)).thenReturn(Optional.of(restaurant));
+        when(restauranteRepository.findById(1)).thenReturn(Optional.of(restaurant));
         when(pedidoRepository.existsByIdClienteAndEstadoIn(any(), any())).thenReturn(false);
-        when(platoRepository.findById(8L)).thenReturn(Optional.of(dish));
+        when(platoRepository.findById(8)).thenReturn(Optional.of(dish));
         // Se simula la persistencia devolviendo el mismo objeto completo construido por el servicio.
         when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        var created = service.crear(new PedidoRequest(1L, List.of(new PedidoDetalleRequest(8L, 2))), customer);
+        var created = service.crear(new PedidoRequest(1, List.of(new PedidoDetalleRequest(8, 2))), customer);
 
         // Estado PENDIENTE demuestra el ciclo inicial; precio 25000 por cantidad 2 produce total 50000.
         assertEquals("PENDIENTE", created.estado());
         // La igualdad con 50000 verifica precio unitario persistido multiplicado por dos unidades.
-        assertEquals(50000L, created.total());
+        assertEquals(50000, created.total());
         // El pedido resultante contiene exactamente la línea incluida en la solicitud.
         assertEquals(1, created.platos().size());
     }
@@ -77,7 +77,7 @@ class PedidoServiceTest {
 
         // La regla produce una excepción de dominio antes de resolver o guardar platos.
         assertThrows(DomainException.class, () -> service.crear(
-                new PedidoRequest(1L, List.of(new PedidoDetalleRequest(8L, 1))), customer));
+                new PedidoRequest(1, List.of(new PedidoDetalleRequest(8, 1))), customer));
 
         // Ninguna entidad Pedido debe persistirse después del rechazo.
         verify(pedidoRepository, never()).save(any());
@@ -90,16 +90,16 @@ class PedidoServiceTest {
         Restaurante otherRestaurant = mock(Restaurante.class);
         Plato dish = mock(Plato.class);
         // Los IDs distintos modelan restaurante solicitado y restaurante dueño del plato.
-        when(requestedRestaurant.getId()).thenReturn(1L);
-        when(otherRestaurant.getId()).thenReturn(2L);
+        when(requestedRestaurant.getId()).thenReturn(1);
+        when(otherRestaurant.getId()).thenReturn(2);
         when(dish.getRestaurante()).thenReturn(otherRestaurant);
-        when(restauranteRepository.findById(1L)).thenReturn(Optional.of(requestedRestaurant));
+        when(restauranteRepository.findById(1)).thenReturn(Optional.of(requestedRestaurant));
         when(pedidoRepository.existsByIdClienteAndEstadoIn(any(), any())).thenReturn(false);
-        when(platoRepository.findById(8L)).thenReturn(Optional.of(dish));
+        when(platoRepository.findById(8)).thenReturn(Optional.of(dish));
 
         // Tras detectar la pertenencia cruzada, el servicio debe lanzar error de negocio.
         assertThrows(DomainException.class, () -> service.crear(
-                new PedidoRequest(1L, List.of(new PedidoDetalleRequest(8L, 1))), customer));
+                new PedidoRequest(1, List.of(new PedidoDetalleRequest(8, 1))), customer));
 
         // La verificación asegura que una solicitud inválida nunca queda parcialmente guardada.
         verify(pedidoRepository, never()).save(any());
@@ -109,14 +109,14 @@ class PedidoServiceTest {
     @Test
     void employeeOnlyListsOrdersForRestaurantInSignedIdentity() {
         // Se prepara una página vacía para comprobar la consulta sin depender de datos de persistencia.
-        when(pedidoRepository.findByRestaurante_IdAndEstado(77L, EstadoPedido.PENDIENTE, PageRequest.of(0, 10)))
+        when(pedidoRepository.findByRestaurante_IdAndEstado(77, EstadoPedido.PENDIENTE, PageRequest.of(0, 10)))
                 .thenReturn(new PageImpl<>(List.of()));
 
         // El ID 77 procede del principal del empleado, no de un parámetro controlable de la solicitud.
         service.listarPorEstado(EstadoPedido.PENDIENTE, 0, 10,
-                new AuthenticatedUser(30L, "EMPLEADO", 77L));
+                new AuthenticatedUser(30, "EMPLEADO", 77));
 
         // La interacción exacta comprueba filtro por restaurante, estado y paginación esperados.
-        verify(pedidoRepository).findByRestaurante_IdAndEstado(77L, EstadoPedido.PENDIENTE, PageRequest.of(0, 10));
+        verify(pedidoRepository).findByRestaurante_IdAndEstado(77, EstadoPedido.PENDIENTE, PageRequest.of(0, 10));
     }
 }

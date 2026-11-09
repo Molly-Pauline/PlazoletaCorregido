@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /** Implementa las reglas de negocio para crear pedidos y consultar los de un restaurante. */
@@ -41,7 +42,6 @@ public class PedidoServiceImpl implements PedidoService {
     private final RestauranteRepository restauranteRepository;
     /** Evita carreras al crear pedidos concurrentes para el mismo cliente. */
     private final PedidoCreationLock pedidoCreationLock;
-
     /** Inyecta los repositorios y el mecanismo de exclusión por cliente. */
     public PedidoServiceImpl(PedidoRepository pedidoRepository, PlatoRepository platoRepository,
                              RestauranteRepository restauranteRepository, PedidoCreationLock pedidoCreationLock) {
@@ -77,7 +77,7 @@ public class PedidoServiceImpl implements PedidoService {
                 .orElseThrow(() -> new DomainException(HttpStatus.BAD_REQUEST, "El restaurante no existe"));
 
         // Se usa un conjunto para rechazar líneas repetidas y un long para acumular importes con rango ampliado.
-        Set<Long> dishIds = new HashSet<>();
+        Set<Integer> dishIds = new HashSet<>();
         long total = 0;
         Pedido pedido;
         // El try captura desbordamientos de la multiplicación o suma del total, sin guardar un pedido parcial.
@@ -102,7 +102,7 @@ public class PedidoServiceImpl implements PedidoService {
                 total = Math.addExact(total, Math.multiplyExact((long) plato.getPrecio(), item.cantidad()));
             }
             // El cliente asociado se toma de la identidad firmada, y el estado inicial lo fija la entidad Pedido.
-            pedido = new Pedido(user.idUsuario(), restaurante, total);
+            pedido = new Pedido(user.idUsuario(), restaurante, Math.toIntExact(total));
             for (PedidoDetalleRequest item : request.platos()) {
                 // Se agregan detalles asociados a entidades resueltas, preservando cantidades y precios del dominio.
                 Plato plato = platoRepository.findById(item.idPlato()).orElseThrow();
@@ -133,4 +133,5 @@ public class PedidoServiceImpl implements PedidoService {
                         PageRequest.of(page, size))
                 .map(PedidoResponse::from);
     }
+
 }

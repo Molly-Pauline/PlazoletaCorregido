@@ -6,9 +6,9 @@ package com.plazoleta.security;
  * @param rol rol autenticado que Spring convierte en autoridad
  * @param idRestaurante asociación firmada del empleado, nula para identidades sin restaurante
  */
-public record AuthenticatedUser(Long idUsuario, String rol, Long idRestaurante) {
+public record AuthenticatedUser(Integer idUsuario, String rol, Integer idRestaurante) {
 	/** Compatibilidad para identidades sin asociación de restaurante, como propietario o cliente. */
-	public AuthenticatedUser(Long idUsuario, String rol) {
+	public AuthenticatedUser(Integer idUsuario, String rol) {
 		this(idUsuario, rol, null);
 	}
 }
