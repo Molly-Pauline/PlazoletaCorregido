@@ -14,4 +14,7 @@ public interface PedidoService {
     /** Lista pedidos del restaurante firmado en la identidad de un empleado por estado. */
     Page<PedidoResponse> listarPorEstado(EstadoPedido estado, int page, int size, AuthenticatedUser empleado);
 
+    /** HU13: asigna el pedido al empleado y lo pasa a preparación. */
+    PedidoResponse asignar(Integer idPedido, AuthenticatedUser empleado);
+
 }

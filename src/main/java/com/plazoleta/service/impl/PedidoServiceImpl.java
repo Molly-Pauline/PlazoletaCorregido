@@ -134,4 +134,29 @@ public class PedidoServiceImpl implements PedidoService {
                 .map(PedidoResponse::from);
     }
 
+    /** Asigna el pedido al empleado autenticado y lo pasa a preparación (HU13). */
+    @Override
+    @Transactional
+    public PedidoResponse asignar(Integer idPedido, AuthenticatedUser empleado) {
+        Pedido pedido = obtenerDelRestaurante(idPedido, empleado);
+        EstadoPedido anterior = pedido.getEstado();
+        pedido.asignarEmpleado(empleado.idUsuario());
+        return PedidoResponse.from(pedido);
+    }
+
+    /** Carga el pedido bloqueando su fila y exige que pertenezca al restaurante firmado en el token del empleado. */
+    private Pedido obtenerDelRestaurante(Integer idPedido, AuthenticatedUser empleado) {
+        if (empleado == null || !"EMPLEADO".equals(empleado.rol()) || empleado.idRestaurante() == null) {
+            throw new DomainException(HttpStatus.FORBIDDEN, "El empleado no tiene un restaurante asociado");
+        }
+        Pedido pedido = pedidoRepository.findByIdParaActualizar(idPedido).orElseThrow(this::pedidoNoEncontrado);
+        if (!empleado.idRestaurante().equals(pedido.getRestaurante().getId())) {
+            throw new DomainException(HttpStatus.FORBIDDEN, "El pedido no pertenece al restaurante del empleado");
+        }
+        return pedido;
+    }
+
+    private DomainException pedidoNoEncontrado() {
+        return new DomainException(HttpStatus.NOT_FOUND, "El pedido no existe");
+    }
 }
