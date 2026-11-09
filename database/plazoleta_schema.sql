@@ -13,18 +13,19 @@ CREATE TABLE IF NOT EXISTS usuario (
     id INT NOT NULL AUTO_INCREMENT,
     nombre VARCHAR(255) NOT NULL,
     apellido VARCHAR(255) NULL,
-    documento_de_identidad VARCHAR(255) NULL,
+    documento VARCHAR(255) NULL,
     celular VARCHAR(255) NULL,
-    fecha_de_nacimiento TIMESTAMP(6) NULL,
+    fecha_nacimiento DATETIME(6) NULL,
     correo VARCHAR(255) NOT NULL,
     clave VARCHAR(255) NULL,
     rol VARCHAR(255) NULL,
-    id_restaurante INT NULL,
+    -- Solo el administrador tiene valor; la restriccion UNIQUE impide un segundo administrador.
+    admin_slot VARCHAR(255) NULL,
     CONSTRAINT pk_usuario PRIMARY KEY (id),
-    CONSTRAINT uq_usuario_documento UNIQUE (documento_de_identidad),
+    CONSTRAINT uq_usuario_documento UNIQUE (documento),
     CONSTRAINT uq_usuario_correo UNIQUE (correo),
-    INDEX idx_usuario_rol (rol),
-    INDEX idx_usuario_restaurante (id_restaurante)
+    CONSTRAINT uq_usuario_admin_slot UNIQUE (admin_slot),
+    INDEX idx_usuario_rol (rol)
 ) ENGINE = InnoDB;
 
 -- id_propietario referencia logicamente al usuario propietario dentro de la misma aplicacion.

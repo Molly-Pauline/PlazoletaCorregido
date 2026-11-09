@@ -20,28 +20,27 @@ public class RestauranteServiceImpl implements RestauranteService {
 
     /** Persistencia local de las entidades Restaurante. */
     private final RestauranteRepository restauranteRepository;
-    /** Puerto que valida en Usuarios que el propietario exista y tenga el rol requerido por HU2. */
+    /** Puerto que valida que el propietario exista y tenga el rol requerido por HU2. */
     private final UsuarioValidationPort usuarioValidationPort;
 
-    /** Inyecta la persistencia y el puerto hacia el servicio Usuarios. */
+    /** Inyecta la persistencia y el validador de propietarios. */
     public RestauranteServiceImpl(RestauranteRepository restauranteRepository, UsuarioValidationPort usuarioValidationPort) {
         this.restauranteRepository = restauranteRepository;
         this.usuarioValidationPort = usuarioValidationPort;
     }
 
-    /** Crea un restaurante solo después de descartar NIT duplicado y validar al propietario en Usuarios (HU2). */
+    /** Crea un restaurante solo después de descartar NIT duplicado y validar al propietario (HU2). */
     @Transactional
     public Restaurante crear(RestauranteRequest request) {
-        // El NIT es identificador único; se rechaza antes de hacer una llamada de red innecesaria.
+        // El NIT es identificador único; se rechaza antes de consultar al propietario.
         if (restauranteRepository.existsByNit(request.nit())) {
             throw new DomainException(HttpStatus.BAD_REQUEST, "Ya existe un restaurante con ese NIT");
         }
-        // La base de usuarios es propiedad del otro microservicio, por eso la comprobación cruza su API.
         if (!usuarioValidationPort.existePropietarioValido(request.idPropietario())) {
             throw new DomainException(HttpStatus.BAD_REQUEST,
                     "El propietario asociado no existe o no tiene rol PROPIETARIO");
         }
-        // Se guardan solo los datos validados; el ID propietario se conserva como referencia entre servicios.
+        // Se guardan solo los datos validados.
         Restaurante restaurante = new Restaurante(request.nombre(), request.nit(), request.direccion(),
                 request.telefono(), request.urlLogo(), request.idPropietario());
         return restauranteRepository.save(restaurante);

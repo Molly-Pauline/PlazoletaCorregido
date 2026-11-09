@@ -159,14 +159,6 @@ public class UsuarioServiceImpl implements UsuarioService {
                 tokenService.getLifetimeSeconds());
     }
 
-    /** Evita conversiones fuera del rango Integer antes de consultar la clave primaria del repositorio. */
-    @Override
-    public boolean esPropietarioValido(Integer idUsuario) {
-        // Null, cero, negativos y valores no representables no pueden identificar a un propietario valido.
-        if (idUsuario == null || idUsuario <= 0) return false;
-        return usuarioRepository.existsByIdAndRol(idUsuario, Rol.PROPIETARIO);
-    }
-
     /** Rechaza un correo ya registrado para mantener la unicidad del identificador de login. */
     private void validarCorreoDisponible(String correo) {
         if (usuarioRepository.existsByCorreo(correo)) {

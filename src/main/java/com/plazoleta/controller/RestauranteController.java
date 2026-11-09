@@ -1,7 +1,6 @@
 package com.plazoleta.controller;
 
 import com.plazoleta.entity.Restaurante;
-import com.plazoleta.exception.DomainException;
 import com.plazoleta.dto.response.RestauranteApiResponse;
 import com.plazoleta.dto.request.RestauranteRequest;
 import com.plazoleta.dto.response.RestauranteResponse;
@@ -15,10 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import com.plazoleta.security.AuthenticatedUser;
 import org.springframework.data.domain.Page;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -36,7 +32,7 @@ public class RestauranteController {
     /** Consulta el menú de platos que pertenece a un restaurante. */
     private final PlatoService platoService;
 
-    /** Inyecta los servicios de dominio y el verificador interno. */
+    /** Inyecta los servicios de restaurantes y platos. */
     public RestauranteController(RestauranteService restauranteService, PlatoService platoService) {
         this.restauranteService = restauranteService;
         this.platoService = platoService;

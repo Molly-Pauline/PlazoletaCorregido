@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -105,6 +106,8 @@ public class PedidoServiceImpl implements PedidoService {
 
         // Se usa un conjunto para rechazar líneas repetidas y un long para acumular importes con rango ampliado.
         Set<Integer> dishIds = new HashSet<>();
+        // Guarda los platos ya consultados para no buscarlos dos veces en la base.
+        List<Plato> platos = new ArrayList<>();
         long total = 0;
         Pedido pedido;
         // El try captura desbordamientos de la multiplicación o suma del total, sin guardar un pedido parcial.
@@ -127,13 +130,13 @@ public class PedidoServiceImpl implements PedidoService {
                 }
                 // El precio persistido y la cantidad validada forman el subtotal; las operaciones detectan overflow.
                 total = Math.addExact(total, Math.multiplyExact((long) plato.getPrecio(), item.cantidad()));
+                platos.add(plato);
             }
             // El cliente asociado se toma de la identidad firmada, y el estado inicial lo fija la entidad Pedido.
             pedido = new Pedido(user.idUsuario(), restaurante, Math.toIntExact(total));
-            for (PedidoDetalleRequest item : request.platos()) {
-                // Se agregan detalles asociados a entidades resueltas, preservando cantidades y precios del dominio.
-                Plato plato = platoRepository.findById(item.idPlato()).orElseThrow();
-                pedido.agregarDetalle(new DetallePedido(plato, item.cantidad()));
+            for (int i = 0; i < platos.size(); i++) {
+                // Se reutilizan los platos validados en el primer recorrido, en el mismo orden de la solicitud.
+                pedido.agregarDetalle(new DetallePedido(platos.get(i), request.platos().get(i).cantidad()));
             }
         } catch (ArithmeticException exception) {
             // El overflow se transforma en una respuesta de validación y no en un error interno de servidor.
