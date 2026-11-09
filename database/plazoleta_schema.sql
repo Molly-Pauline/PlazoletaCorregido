@@ -115,4 +115,20 @@ CREATE TABLE IF NOT EXISTS empleado_restaurante (
         ON DELETE RESTRICT
 ) ENGINE = InnoDB;
 
+-- Trazabilidad de HU17: un registro por cada cambio de estado de un pedido.
+CREATE TABLE IF NOT EXISTS pedido_historial (
+    id INT NOT NULL AUTO_INCREMENT,
+    id_pedido INT NOT NULL,
+    estado_anterior VARCHAR(24) NULL,
+    estado_nuevo VARCHAR(24) NOT NULL,
+    id_usuario INT NOT NULL,
+    fecha TIMESTAMP(6) NOT NULL,
+    CONSTRAINT pk_pedido_historial PRIMARY KEY (id),
+    CONSTRAINT fk_pedido_historial_pedido
+        FOREIGN KEY (id_pedido) REFERENCES pedidos (id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    INDEX idx_pedido_historial_pedido (id_pedido)
+) ENGINE = InnoDB;
+
 -- No hay tablas rol ni categoria: el codigo utiliza un enum de roles y categoria como texto.

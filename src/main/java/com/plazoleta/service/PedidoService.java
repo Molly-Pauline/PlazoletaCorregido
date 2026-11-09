@@ -1,10 +1,13 @@
 package com.plazoleta.service;
 
 import com.plazoleta.dto.request.PedidoRequest;
+import com.plazoleta.dto.response.TrazabilidadResponse;
 import com.plazoleta.dto.response.PedidoResponse;
 import com.plazoleta.entity.EstadoPedido;
 import com.plazoleta.security.AuthenticatedUser;
 import org.springframework.data.domain.Page;
+
+import java.util.List;
 
 /** Contrato de creación y consulta paginada de pedidos. */
 public interface PedidoService {
@@ -26,4 +29,6 @@ public interface PedidoService {
     /** HU16: cancela un pedido pendiente del cliente autenticado. */
     PedidoResponse cancelar(Integer idPedido, AuthenticatedUser cliente);
 
+    /** HU17: devuelve en orden cronológico los cambios de estado de un pedido del cliente. */
+    List<TrazabilidadResponse> consultarTrazabilidad(Integer idPedido, AuthenticatedUser cliente);
 }

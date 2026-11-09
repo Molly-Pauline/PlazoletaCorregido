@@ -1,14 +1,18 @@
 package com.plazoleta.service.impl;
 
+import com.plazoleta.algoritmo.MergeSort;
 import com.plazoleta.dto.request.PedidoDetalleRequest;
 import com.plazoleta.dto.request.PedidoRequest;
 import com.plazoleta.dto.response.PedidoResponse;
+import com.plazoleta.dto.response.TrazabilidadResponse;
 import com.plazoleta.entity.DetallePedido;
 import com.plazoleta.entity.EstadoPedido;
+import com.plazoleta.entity.HistorialPedido;
 import com.plazoleta.entity.Pedido;
 import com.plazoleta.entity.Plato;
 import com.plazoleta.entity.Restaurante;
 import com.plazoleta.exception.DomainException;
+import com.plazoleta.repository.HistorialPedidoRepository;
 import com.plazoleta.repository.PedidoRepository;
 import com.plazoleta.repository.PlatoRepository;
 import com.plazoleta.repository.RestauranteRepository;
@@ -25,6 +29,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -46,6 +52,8 @@ public class PedidoServiceImpl implements PedidoService {
     private final RestauranteRepository restauranteRepository;
     /** Evita carreras al crear pedidos concurrentes para el mismo cliente. */
     private final PedidoCreationLock pedidoCreationLock;
+    /** Guarda y consulta la trazabilidad de los pedidos (HU17). */
+    private final HistorialPedidoRepository historialRepository;
     /** Permite obtener el celular del cliente para avisarle que su pedido está listo. */
     private final UsuarioRepository usuarioRepository;
     /** Protege el PIN con BCrypt, igual que las contraseñas. */
@@ -58,12 +66,13 @@ public class PedidoServiceImpl implements PedidoService {
     /** Inyecta los repositorios, el mecanismo de exclusión por cliente y los servicios de apoyo. */
     public PedidoServiceImpl(PedidoRepository pedidoRepository, PlatoRepository platoRepository,
                              RestauranteRepository restauranteRepository, PedidoCreationLock pedidoCreationLock,
-                             UsuarioRepository usuarioRepository,
+                             HistorialPedidoRepository historialRepository, UsuarioRepository usuarioRepository,
                              PasswordEncoder passwordEncoder, NotificacionSmsService notificacionSms) {
         this.pedidoRepository = pedidoRepository;
         this.platoRepository = platoRepository;
         this.restauranteRepository = restauranteRepository;
         this.pedidoCreationLock = pedidoCreationLock;
+        this.historialRepository = historialRepository;
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.notificacionSms = notificacionSms;
@@ -131,7 +140,10 @@ public class PedidoServiceImpl implements PedidoService {
             throw new DomainException(HttpStatus.BAD_REQUEST, "El total del pedido excede el limite permitido");
         }
         // Solo después de validar todas las líneas se persiste y se transforma a la respuesta pública.
-        return PedidoResponse.from(pedidoRepository.save(pedido));
+        Pedido guardado = pedidoRepository.save(pedido);
+        // El primer registro de trazabilidad deja constancia de cuándo se creó el pedido.
+        registrarCambio(guardado, null, user);
+        return PedidoResponse.from(guardado);
     }
 
     /** Consulta pedidos de un empleado por estado y por el restaurante incluido en su identidad firmada (HU12). */
@@ -159,6 +171,7 @@ public class PedidoServiceImpl implements PedidoService {
         Pedido pedido = obtenerDelRestaurante(idPedido, empleado);
         EstadoPedido anterior = pedido.getEstado();
         pedido.asignarEmpleado(empleado.idUsuario());
+        registrarCambio(pedido, anterior, empleado);
         return PedidoResponse.from(pedido);
     }
 
@@ -170,6 +183,7 @@ public class PedidoServiceImpl implements PedidoService {
         EstadoPedido anterior = pedido.getEstado();
         String pin = generarPin();
         pedido.marcarListo(passwordEncoder.encode(pin));
+        registrarCambio(pedido, anterior, empleado);
         notificacionSms.enviar(obtenerCelularCliente(pedido),
                 "Tu pedido #" + pedido.getId() + " de " + pedido.getRestaurante().getNombre()
                         + " esta listo. PIN para reclamarlo: " + pin);
@@ -187,6 +201,7 @@ public class PedidoServiceImpl implements PedidoService {
             throw new DomainException(HttpStatus.BAD_REQUEST, "El PIN de seguridad es incorrecto");
         }
         pedido.entregar();
+        registrarCambio(pedido, anterior, empleado);
         return PedidoResponse.from(pedido);
     }
 
@@ -198,7 +213,22 @@ public class PedidoServiceImpl implements PedidoService {
         verificarDueno(pedido, cliente);
         EstadoPedido anterior = pedido.getEstado();
         pedido.cancelar();
+        registrarCambio(pedido, anterior, cliente);
         return PedidoResponse.from(pedido);
+    }
+
+    /** Devuelve los cambios de estado de un pedido propio, del más antiguo al más reciente (HU17). */
+    @Override
+    @Transactional(readOnly = true)
+    public List<TrazabilidadResponse> consultarTrazabilidad(Integer idPedido, AuthenticatedUser cliente) {
+        Pedido pedido = pedidoRepository.findById(idPedido).orElseThrow(this::pedidoNoEncontrado);
+        verificarDueno(pedido, cliente);
+        // El ID desempata los cambios registrados en el mismo instante.
+        Comparator<HistorialPedido> cronologico = Comparator.comparing(HistorialPedido::getFecha)
+                .thenComparing(HistorialPedido::getId);
+        return MergeSort.ordenar(historialRepository.findByIdPedido(idPedido), cronologico).stream()
+                .map(TrazabilidadResponse::from)
+                .toList();
     }
 
     /** Carga el pedido bloqueando su fila y exige que pertenezca al restaurante firmado en el token del empleado. */
@@ -218,6 +248,12 @@ public class PedidoServiceImpl implements PedidoService {
         if (cliente == null || !pedido.getIdCliente().equals(cliente.idUsuario())) {
             throw new DomainException(HttpStatus.FORBIDDEN, "El pedido no pertenece al cliente autenticado");
         }
+    }
+
+    /** Guarda el registro de trazabilidad con el estado actual del pedido. */
+    private void registrarCambio(Pedido pedido, EstadoPedido anterior, AuthenticatedUser usuario) {
+        historialRepository.save(new HistorialPedido(pedido.getId(), anterior, pedido.getEstado(),
+                usuario.idUsuario(), LocalDateTime.now()));
     }
 
     /** Obtiene el celular de destino del SMS. */

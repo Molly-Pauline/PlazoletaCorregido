@@ -1,11 +1,13 @@
 package com.plazoleta.service;
 
 import com.plazoleta.entity.EstadoPedido;
+import com.plazoleta.entity.HistorialPedido;
 import com.plazoleta.entity.Pedido;
 import com.plazoleta.entity.Restaurante;
 import com.plazoleta.entity.Usuario;
 import com.plazoleta.entity.estado.PedidoState;
 import com.plazoleta.exception.DomainException;
+import com.plazoleta.repository.HistorialPedidoRepository;
 import com.plazoleta.repository.PedidoRepository;
 import com.plazoleta.repository.PlatoRepository;
 import com.plazoleta.repository.RestauranteRepository;
@@ -19,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,7 +37,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/** Pruebas de HU13 a HU16: ciclo del pedido, PIN y cancelación. */
+/** Pruebas de HU13 a HU17: ciclo del pedido, PIN, cancelación y trazabilidad. */
 class PedidoCicloServiceTest {
 
     private static final int ID_PEDIDO = 5;
@@ -42,11 +45,12 @@ class PedidoCicloServiceTest {
     private static final int ID_RESTAURANTE = 77;
 
     private final PedidoRepository pedidoRepository = mock(PedidoRepository.class);
+    private final HistorialPedidoRepository historialRepository = mock(HistorialPedidoRepository.class);
     private final UsuarioRepository usuarioRepository = mock(UsuarioRepository.class);
     private final NotificacionSmsService sms = mock(NotificacionSmsService.class);
     private final PasswordEncoder encoder = new BCryptPasswordEncoder(4);
     private final PedidoServiceImpl service = new PedidoServiceImpl(pedidoRepository, mock(PlatoRepository.class),
-            mock(RestauranteRepository.class), mock(PedidoCreationLock.class),
+            mock(RestauranteRepository.class), mock(PedidoCreationLock.class), historialRepository,
             usuarioRepository, encoder, sms);
 
     private final AuthenticatedUser empleado = new AuthenticatedUser(30, "EMPLEADO", ID_RESTAURANTE);
@@ -71,6 +75,7 @@ class PedidoCicloServiceTest {
 
         assertEquals("EN_PREPARACION", respuesta.estado());
         assertEquals(30, respuesta.idEmpleado());
+        verify(historialRepository).save(any(HistorialPedido.class));
     }
 
     @Test
@@ -165,6 +170,29 @@ class PedidoCicloServiceTest {
                 () -> service.cancelar(ID_PEDIDO, new AuthenticatedUser(99, "CLIENTE")));
 
         assertEquals(HttpStatus.FORBIDDEN, error.getStatus());
+    }
+
+    @Test
+    void hu17DevuelveLosCambiosEnOrdenCronologico() {
+        LocalDateTime inicio = LocalDateTime.of(2026, 11, 4, 12, 0);
+        when(historialRepository.findByIdPedido(ID_PEDIDO)).thenReturn(List.of(
+                new HistorialPedido(ID_PEDIDO, EstadoPedido.EN_PREPARACION, EstadoPedido.LISTO, 30, inicio.plusMinutes(20)),
+                new HistorialPedido(ID_PEDIDO, null, EstadoPedido.PENDIENTE, ID_CLIENTE, inicio),
+                new HistorialPedido(ID_PEDIDO, EstadoPedido.PENDIENTE, EstadoPedido.EN_PREPARACION, 30, inicio.plusMinutes(5))));
+
+        var cambios = service.consultarTrazabilidad(ID_PEDIDO, cliente);
+
+        assertEquals(List.of("PENDIENTE", "EN_PREPARACION", "LISTO"),
+                cambios.stream().map(cambio -> cambio.estadoNuevo()).toList());
+        assertNull(cambios.get(0).estadoAnterior());
+    }
+
+    @Test
+    void hu17SoloMuestraPedidosPropios() {
+        assertThrows(DomainException.class,
+                () -> service.consultarTrazabilidad(ID_PEDIDO, new AuthenticatedUser(99, "CLIENTE")));
+
+        verify(historialRepository, never()).findByIdPedido(any());
     }
 
     /** Lee del SMS capturado el PIN de seis dígitos que recibió el cliente. */
