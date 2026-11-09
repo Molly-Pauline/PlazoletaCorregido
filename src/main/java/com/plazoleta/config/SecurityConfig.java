@@ -49,7 +49,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PATCH, "/platos/*/estado").hasRole("PROPIETARIO")
                 .requestMatchers(HttpMethod.POST, "/pedidos").hasRole("CLIENTE")
                 .requestMatchers(HttpMethod.GET, "/pedidos").hasRole("EMPLEADO")
-                .requestMatchers(HttpMethod.PATCH, "/pedidos/*/asignar", "/pedidos/*/listo").hasRole("EMPLEADO")
+                .requestMatchers(HttpMethod.PATCH, "/pedidos/*/asignar", "/pedidos/*/listo", "/pedidos/*/entregar").hasRole("EMPLEADO")
                 .anyRequest().authenticated())
             .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
             .build();

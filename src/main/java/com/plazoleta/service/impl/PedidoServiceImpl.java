@@ -176,6 +176,20 @@ public class PedidoServiceImpl implements PedidoService {
         return PedidoResponse.from(pedido);
     }
 
+    /** Entrega el pedido solo si está listo y el PIN coincide con el enviado al cliente (HU15). */
+    @Override
+    @Transactional
+    public PedidoResponse entregar(Integer idPedido, String pin, AuthenticatedUser empleado) {
+        Pedido pedido = obtenerDelRestaurante(idPedido, empleado);
+        EstadoPedido anterior = pedido.getEstado();
+        // Solo un pedido listo tiene PIN; en los demás estados responde el State con su propio error.
+        if (anterior == EstadoPedido.LISTO && !passwordEncoder.matches(pin, pedido.getPinHash())) {
+            throw new DomainException(HttpStatus.BAD_REQUEST, "El PIN de seguridad es incorrecto");
+        }
+        pedido.entregar();
+        return PedidoResponse.from(pedido);
+    }
+
     /** Carga el pedido bloqueando su fila y exige que pertenezca al restaurante firmado en el token del empleado. */
     private Pedido obtenerDelRestaurante(Integer idPedido, AuthenticatedUser empleado) {
         if (empleado == null || !"EMPLEADO".equals(empleado.rol()) || empleado.idRestaurante() == null) {
