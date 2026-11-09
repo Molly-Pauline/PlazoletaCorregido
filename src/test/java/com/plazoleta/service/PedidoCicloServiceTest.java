@@ -4,6 +4,7 @@ import com.plazoleta.entity.EstadoPedido;
 import com.plazoleta.entity.Pedido;
 import com.plazoleta.entity.Restaurante;
 import com.plazoleta.entity.Usuario;
+import com.plazoleta.entity.estado.PedidoState;
 import com.plazoleta.exception.DomainException;
 import com.plazoleta.repository.PedidoRepository;
 import com.plazoleta.repository.PlatoRepository;
@@ -33,7 +34,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/** Pruebas de HU13 a HU15: ciclo del pedido y PIN. */
+/** Pruebas de HU13 a HU16: ciclo del pedido, PIN y cancelación. */
 class PedidoCicloServiceTest {
 
     private static final int ID_PEDIDO = 5;
@@ -139,7 +140,31 @@ class PedidoCicloServiceTest {
 
         assertThrows(DomainException.class, () -> service.asignar(ID_PEDIDO, empleado));
         assertThrows(DomainException.class, () -> service.marcarListo(ID_PEDIDO, empleado));
+        assertThrows(DomainException.class, () -> service.cancelar(ID_PEDIDO, cliente));
         assertEquals(EstadoPedido.ENTREGADO, pedido.getEstado());
+    }
+
+    @Test
+    void hu16CancelaUnPedidoPendiente() {
+        assertEquals("CANCELADO", service.cancelar(ID_PEDIDO, cliente).estado());
+    }
+
+    @Test
+    void hu16InformaElMensajeExigidoSiNoEstaPendiente() {
+        pedido.asignarEmpleado(30);
+
+        DomainException error = assertThrows(DomainException.class, () -> service.cancelar(ID_PEDIDO, cliente));
+
+        assertEquals(PedidoState.MENSAJE_NO_CANCELABLE, error.getMessage());
+        assertEquals("Lo sentimos, tu pedido ya está en preparación y no puede cancelarse", error.getMessage());
+    }
+
+    @Test
+    void hu16NoPermiteCancelarPedidosAjenos() {
+        DomainException error = assertThrows(DomainException.class,
+                () -> service.cancelar(ID_PEDIDO, new AuthenticatedUser(99, "CLIENTE")));
+
+        assertEquals(HttpStatus.FORBIDDEN, error.getStatus());
     }
 
     /** Lee del SMS capturado el PIN de seis dígitos que recibió el cliente. */

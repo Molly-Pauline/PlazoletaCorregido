@@ -81,4 +81,10 @@ public class PedidoController {
         return new PedidoApiResponse(true, "Pedido entregado", pedidoService.entregar(idPedido, request.pin(), user));
     }
 
+    /** HU16: el cliente cancela su pedido mientras siga pendiente. */
+    @PatchMapping("/{idPedido}/cancelar")
+    public PedidoApiResponse cancelar(@PathVariable Integer idPedido, @AuthenticationPrincipal AuthenticatedUser user) {
+        return new PedidoApiResponse(true, "Pedido cancelado", pedidoService.cancelar(idPedido, user));
+    }
+
 }

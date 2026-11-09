@@ -23,4 +23,7 @@ public interface PedidoService {
     /** HU15: entrega el pedido después de comprobar el PIN. */
     PedidoResponse entregar(Integer idPedido, String pin, AuthenticatedUser empleado);
 
+    /** HU16: cancela un pedido pendiente del cliente autenticado. */
+    PedidoResponse cancelar(Integer idPedido, AuthenticatedUser cliente);
+
 }

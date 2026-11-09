@@ -101,6 +101,11 @@ public class Pedido {
         this.pinHash = null;
     }
 
+    /** HU16: el State solo lo permite mientras el pedido está pendiente. */
+    public void cancelar() {
+        this.estado = estadoActual().cancelar();
+    }
+
     /** Traduce el valor persistido al objeto que implementa las reglas de ese estado. */
     private PedidoState estadoActual() {
         return PedidoStates.de(estado);
