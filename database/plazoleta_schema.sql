@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS pedidos (
     estado VARCHAR(24) NOT NULL,
     fecha_creacion TIMESTAMP(6) NOT NULL,
     total INT NOT NULL,
+    pin_hash VARCHAR(60) NULL,
     CONSTRAINT pk_pedidos PRIMARY KEY (id),
     CONSTRAINT chk_pedidos_total CHECK (total >= 0),
     CONSTRAINT fk_pedidos_restaurante

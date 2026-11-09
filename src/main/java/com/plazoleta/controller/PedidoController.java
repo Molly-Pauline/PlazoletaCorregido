@@ -67,4 +67,10 @@ public class PedidoController {
         return new PedidoApiResponse(true, "Pedido asignado", pedidoService.asignar(idPedido, user));
     }
 
+    /** HU14: el pedido pasa a listo y el cliente recibe su PIN por SMS. */
+    @PatchMapping("/{idPedido}/listo")
+    public PedidoApiResponse marcarListo(@PathVariable Integer idPedido, @AuthenticationPrincipal AuthenticatedUser user) {
+        return new PedidoApiResponse(true, "Pedido listo; PIN enviado al cliente", pedidoService.marcarListo(idPedido, user));
+    }
+
 }

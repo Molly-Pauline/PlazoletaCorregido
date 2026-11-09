@@ -56,6 +56,10 @@ public class Pedido {
     @Column(nullable = false)
     private Integer total;
 
+    /** Hash BCrypt del PIN enviado al cliente; solo existe mientras el pedido está listo para entrega. */
+    @Column(name = "pin_hash", length = 60)
+    private String pinHash;
+
     /** Las líneas se guardan y eliminan junto con la cabecera; la lista refleja el lado inverso de la relación. */
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<DetallePedido> detalles = new ArrayList<>();
@@ -85,12 +89,19 @@ public class Pedido {
         this.idEmpleado = idEmpleado;
     }
 
+    /** HU14: el State valida la transición y se conserva el hash del PIN para la entrega. */
+    public void marcarListo(String pinHash) {
+        this.estado = estadoActual().marcarListo();
+        this.pinHash = pinHash;
+    }
+
     /** Traduce el valor persistido al objeto que implementa las reglas de ese estado. */
     private PedidoState estadoActual() {
         return PedidoStates.de(estado);
     }
 
     public Integer getId() { return id; }
+    public String getPinHash() { return pinHash; }
     public Integer getIdCliente() { return idCliente; }
     public Integer getIdEmpleado() { return idEmpleado; }
     public Restaurante getRestaurante() { return restaurante; }

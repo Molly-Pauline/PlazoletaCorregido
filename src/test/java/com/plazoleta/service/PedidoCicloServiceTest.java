@@ -3,25 +3,36 @@ package com.plazoleta.service;
 import com.plazoleta.entity.EstadoPedido;
 import com.plazoleta.entity.Pedido;
 import com.plazoleta.entity.Restaurante;
+import com.plazoleta.entity.Usuario;
 import com.plazoleta.exception.DomainException;
 import com.plazoleta.repository.PedidoRepository;
 import com.plazoleta.repository.PlatoRepository;
 import com.plazoleta.repository.RestauranteRepository;
+import com.plazoleta.repository.UsuarioRepository;
 import com.plazoleta.security.AuthenticatedUser;
 import com.plazoleta.service.impl.PedidoServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/** Pruebas de HU13: asignación del pedido al empleado. */
+/** Pruebas de HU13 y HU14: asignación, pedido listo y PIN. */
 class PedidoCicloServiceTest {
 
     private static final int ID_PEDIDO = 5;
@@ -29,8 +40,12 @@ class PedidoCicloServiceTest {
     private static final int ID_RESTAURANTE = 77;
 
     private final PedidoRepository pedidoRepository = mock(PedidoRepository.class);
+    private final UsuarioRepository usuarioRepository = mock(UsuarioRepository.class);
+    private final NotificacionSmsService sms = mock(NotificacionSmsService.class);
+    private final PasswordEncoder encoder = new BCryptPasswordEncoder(4);
     private final PedidoServiceImpl service = new PedidoServiceImpl(pedidoRepository, mock(PlatoRepository.class),
-            mock(RestauranteRepository.class), mock(PedidoCreationLock.class));
+            mock(RestauranteRepository.class), mock(PedidoCreationLock.class),
+            usuarioRepository, encoder, sms);
 
     private final AuthenticatedUser empleado = new AuthenticatedUser(30, "EMPLEADO", ID_RESTAURANTE);
     private final AuthenticatedUser cliente = new AuthenticatedUser(ID_CLIENTE, "CLIENTE");
@@ -40,8 +55,12 @@ class PedidoCicloServiceTest {
     void prepararPedido() {
         Restaurante restaurante = mock(Restaurante.class);
         when(restaurante.getId()).thenReturn(ID_RESTAURANTE);
+        when(restaurante.getNombre()).thenReturn("La Casona");
         pedido = new Pedido(ID_CLIENTE, restaurante, 50000);
         when(pedidoRepository.findByIdParaActualizar(ID_PEDIDO)).thenReturn(Optional.of(pedido));
+        when(pedidoRepository.findById(ID_PEDIDO)).thenReturn(Optional.of(pedido));
+        when(usuarioRepository.findById(ID_CLIENTE))
+                .thenReturn(Optional.of(Usuario.builder().celular("+573001234569").build()));
     }
 
     @Test
@@ -59,5 +78,30 @@ class PedidoCicloServiceTest {
 
         assertEquals(HttpStatus.FORBIDDEN, error.getStatus());
         assertEquals(EstadoPedido.PENDIENTE, pedido.getEstado());
+    }
+
+    @Test
+    void hu14EnviaPinPorSmsYGuardaSoloSuHash() {
+        pedido.asignarEmpleado(30);
+
+        var respuesta = service.marcarListo(ID_PEDIDO, empleado);
+
+        assertEquals("LISTO", respuesta.estado());
+        String pin = pinEnviado();
+        assertTrue(encoder.matches(pin, pedido.getPinHash()));
+    }
+
+    @Test
+    void hu14NoAplicaAUnPedidoPendiente() {
+        assertThrows(DomainException.class, () -> service.marcarListo(ID_PEDIDO, empleado));
+
+        verify(sms, never()).enviar(any(), any());
+    }
+
+    /** Lee del SMS capturado el PIN de seis dígitos que recibió el cliente. */
+    private String pinEnviado() {
+        ArgumentCaptor<String> mensaje = ArgumentCaptor.forClass(String.class);
+        verify(sms, times(1)).enviar(eq("+573001234569"), mensaje.capture());
+        return mensaje.getValue().substring(mensaje.getValue().length() - 6);
     }
 }

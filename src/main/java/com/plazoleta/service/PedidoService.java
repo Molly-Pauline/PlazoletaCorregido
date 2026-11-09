@@ -17,4 +17,7 @@ public interface PedidoService {
     /** HU13: asigna el pedido al empleado y lo pasa a preparación. */
     PedidoResponse asignar(Integer idPedido, AuthenticatedUser empleado);
 
+    /** HU14: marca el pedido como listo y envía el PIN al cliente por SMS. */
+    PedidoResponse marcarListo(Integer idPedido, AuthenticatedUser empleado);
+
 }
