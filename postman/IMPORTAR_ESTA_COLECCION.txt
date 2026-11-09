@@ -1,0 +1,1 @@
+Importa Plazoleta.HU1-HU12.postman_collection.json. Importa Plazoleta.HU1-HU12.local.postman_environment.json. Los roles de administrador y propietario se asignan desde el backend. En HU6 se mantiene idRol e idRestaurante conforme al DTO actual.

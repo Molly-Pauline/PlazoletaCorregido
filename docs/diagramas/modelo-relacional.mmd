@@ -1,0 +1,71 @@
+erDiagram
+    usuario {
+        INT id PK
+        VARCHAR nombre
+        VARCHAR apellido
+        VARCHAR documento UK
+        VARCHAR celular
+        DATETIME fecha_nacimiento
+        VARCHAR correo UK
+        VARCHAR clave "hash BCrypt"
+        VARCHAR rol "ADMINISTRADOR, PROPIETARIO, EMPLEADO, CLIENTE"
+        VARCHAR admin_slot UK "solo el administrador"
+    }
+    restaurantes {
+        INT id PK
+        VARCHAR nombre
+        VARCHAR nit UK
+        VARCHAR direccion
+        VARCHAR telefono
+        VARCHAR url_logo
+        INT id_propietario "usuario PROPIETARIO"
+    }
+    empleado_restaurante {
+        INT id_usuario PK "usuario EMPLEADO"
+        INT id_restaurante FK
+    }
+    platos {
+        INT id PK
+        VARCHAR nombre
+        INT precio
+        VARCHAR descripcion
+        VARCHAR url_imagen
+        VARCHAR categoria
+        BOOLEAN activo
+        INT id_restaurante FK
+    }
+    pedidos {
+        INT id PK
+        INT id_cliente "usuario CLIENTE"
+        INT id_empleado "usuario EMPLEADO, nulo hasta HU13"
+        INT id_restaurante FK
+        VARCHAR estado
+        TIMESTAMP fecha_creacion
+        INT total
+        VARCHAR pin_hash "hash BCrypt del PIN"
+    }
+    pedido_detalles {
+        INT id PK
+        INT id_pedido FK
+        INT id_plato FK
+        INT cantidad
+        INT precio_unitario
+    }
+    pedido_historial {
+        INT id PK
+        INT id_pedido FK
+        VARCHAR estado_anterior
+        VARCHAR estado_nuevo
+        INT id_usuario "quien hizo el cambio"
+        TIMESTAMP fecha
+    }
+
+    usuario ||--o{ restaurantes : "es propietario de"
+    usuario ||--o| empleado_restaurante : "trabaja en"
+    restaurantes ||--o{ empleado_restaurante : "tiene empleados"
+    restaurantes ||--o{ platos : "ofrece"
+    restaurantes ||--o{ pedidos : "recibe"
+    usuario ||--o{ pedidos : "hace (cliente)"
+    pedidos ||--|{ pedido_detalles : "contiene"
+    platos ||--o{ pedido_detalles : "aparece en"
+    pedidos ||--|{ pedido_historial : "registra cambios en"
