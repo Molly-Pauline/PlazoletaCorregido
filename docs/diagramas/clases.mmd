@@ -1,0 +1,143 @@
+classDiagram
+    direction TB
+
+    class Usuario {
+        -Integer id
+        -String nombre
+        -String apellido
+        -String documentoDeIdentidad
+        -String celular
+        -Date fechaDeNacimiento
+        -String correo
+        -String clave
+        -Rol rol
+        -String adminSlot
+    }
+    class Rol {
+        <<enumeration>>
+        ADMINISTRADOR
+        PROPIETARIO
+        EMPLEADO
+        CLIENTE
+    }
+    class EmpleadoRestaurante {
+        -Integer idUsuario
+        -Integer idRestaurante
+    }
+    class Restaurante {
+        -Integer id
+        -String nombre
+        -String nit
+        -String direccion
+        -String telefono
+        -String urlLogo
+        -Integer idPropietario
+    }
+    class Plato {
+        -Integer id
+        -String nombre
+        -Integer precio
+        -String descripcion
+        -String urlImagen
+        -String categoria
+        -boolean activo
+        +actualizarPrecioYDescripcion(precio, descripcion)
+        +cambiarEstado(activo)
+    }
+    class Pedido {
+        -Integer id
+        -Integer idCliente
+        -Integer idEmpleado
+        -EstadoPedido estado
+        -LocalDateTime fechaCreacion
+        -Integer total
+        -String pinHash
+        +agregarDetalle(detalle)
+        +asignarEmpleado(idEmpleado)
+        +marcarListo(pinHash)
+        +entregar()
+        +cancelar()
+    }
+    class DetallePedido {
+        -Integer id
+        -Integer cantidad
+        -Integer precioUnitario
+    }
+    class HistorialPedido {
+        -Integer id
+        -Integer idPedido
+        -EstadoPedido estadoAnterior
+        -EstadoPedido estadoNuevo
+        -Integer idUsuario
+        -LocalDateTime fecha
+    }
+    class EstadoPedido {
+        <<enumeration>>
+        PENDIENTE
+        EN_PREPARACION
+        LISTO
+        ENTREGADO
+        CANCELADO
+    }
+
+    class PedidoState {
+        <<interface>>
+        +estado() EstadoPedido
+        +asignar() EstadoPedido
+        +marcarListo() EstadoPedido
+        +entregar() EstadoPedido
+        +cancelar() EstadoPedido
+    }
+    class PedidoStates {
+        +de(estado)$ PedidoState
+    }
+    class PendienteState
+    class EnPreparacionState
+    class ListoState
+    class EntregadoState
+    class CanceladoState
+
+    class PedidoService {
+        <<interface>>
+        +crear(request, cliente)
+        +listarPorEstado(estado, page, size, empleado)
+        +asignar(idPedido, empleado)
+        +marcarListo(idPedido, empleado)
+        +entregar(idPedido, pin, empleado)
+        +cancelar(idPedido, cliente)
+        +consultarTrazabilidad(idPedido, cliente)
+    }
+    class PedidoServiceImpl
+    class NotificacionSmsService {
+        <<interface>>
+        +enviar(celular, mensaje)
+    }
+    class SmsSimuladoService
+    class MergeSort {
+        +ordenar(lista, comparador)$ List
+    }
+    class BusquedaBinaria {
+        +limiteInferior(lista, comparacion)$ int
+    }
+
+    Usuario --> Rol
+    Usuario "1" -- "0..1" EmpleadoRestaurante
+    Restaurante "1" -- "0..*" EmpleadoRestaurante
+    Restaurante "1" -- "0..*" Plato
+    Restaurante "1" -- "0..*" Pedido
+    Pedido "1" *-- "1..*" DetallePedido
+    DetallePedido "0..*" --> "1" Plato
+    Pedido --> EstadoPedido
+    Pedido "1" -- "1..*" HistorialPedido
+    Pedido ..> PedidoStates : obtiene su estado
+    PedidoStates o-- PedidoState
+    PedidoState <|.. PendienteState
+    PedidoState <|.. EnPreparacionState
+    PedidoState <|.. ListoState
+    PedidoState <|.. EntregadoState
+    PedidoState <|.. CanceladoState
+    PedidoService <|.. PedidoServiceImpl
+    PedidoServiceImpl --> NotificacionSmsService
+    NotificacionSmsService <|.. SmsSimuladoService
+    PedidoServiceImpl ..> MergeSort : ordena trazabilidad
+    PedidoServiceImpl ..> Pedido

@@ -1,0 +1,907 @@
+{
+  "info": {
+    "name": "Plazoleta | HU1-HU17",
+    "description": "Colección integrada para probar HU1-HU17 en la aplicación unificada (puerto 8080). El primer administrador puede crearse sin token si aún no existe y el cupo sigue libre; también puede aprovisionarse al iniciar la aplicación con BOOTSTRAP_ADMIN_EMAIL/BOOTSTRAP_ADMIN_PASSWORD.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0 - Preparación",
+      "item": [
+        {
+          "name": "Inicialización - Crear primer administrador (solo si no existe)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const stamp = Date.now().toString();",
+                  "pm.environment.set('adminNuevoCorreo', `admin.${stamp}@example.com`);",
+                  "pm.environment.set('adminNuevoDocumento', `${stamp}9`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Primer administrador creado o el cupo ya esta ocupado', function () { pm.expect([201, 409]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 201) {",
+                  "  pm.environment.set('idAdminCreado', pm.response.json().id);",
+                  "  pm.environment.set('adminCorreo', pm.environment.get('adminNuevoCorreo'));",
+                  "  pm.environment.set('adminClave', pm.environment.get('adminNuevoClave'));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Administrador\",\n  \"apellido\": \"Demo\",\n  \"documentoDeIdentidad\": \"{{adminNuevoDocumento}}\",\n  \"celular\": \"+573001234560\",\n  \"correo\": \"{{adminNuevoCorreo}}\",\n  \"clave\": \"{{adminNuevoClave}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{usuariosBaseUrl}}/administradores"
+          }
+        },
+        {
+          "name": "Salud - Plazoleta",
+          "request": {
+            "method": "GET",
+            "url": "{{plazoletaBaseUrl}}/actuator/health"
+          }
+        },
+        {
+          "name": "HU5 - Login administrador existente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login de administrador responde 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.environment.set('tokenAdmin', body.token);",
+                  "  pm.environment.set('idAdmin', body.idUsuario);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{adminCorreo}}\",\n  \"clave\": \"{{adminClave}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{usuariosBaseUrl}}/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HU1-HU6 - Cuentas y restaurante",
+      "item": [
+        {
+          "name": "HU1 - Crear propietario (requiere administrador)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const stamp = Date.now().toString();",
+                  "pm.environment.set('propietarioCorreo', `propietario.${stamp}@example.com`);",
+                  "pm.environment.set('propietarioDocumento', stamp);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Propietario creado', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { pm.environment.set('idPropietario', pm.response.json().id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Maria\",\n  \"apellido\": \"Perez\",\n  \"documentoDeIdentidad\": \"{{propietarioDocumento}}\",\n  \"celular\": \"+573001234567\",\n  \"fechaDeNacimiento\": \"1990-01-01T00:00:00.000+0000\",\n  \"correo\": \"{{propietarioCorreo}}\",\n  \"clave\": \"{{propietarioClave}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{usuariosBaseUrl}}/propietarios"
+          }
+        },
+        {
+          "name": "HU5 - Login propietario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login de propietario responde 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.environment.set('tokenPropietario', body.token);",
+                  "  pm.environment.set('idPropietario', body.idUsuario);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{propietarioCorreo}}\",\n  \"clave\": \"{{propietarioClave}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{usuariosBaseUrl}}/login"
+          }
+        },
+        {
+          "name": "HU2 - Crear restaurante (administrador)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('restauranteNit', Date.now().toString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Restaurante creado', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { pm.environment.set('idRestaurante', pm.response.json().restaurante.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"La Casona\",\n  \"nit\": \"{{restauranteNit}}\",\n  \"direccion\": \"Calle 123 #45-67\",\n  \"telefono\": \"+573001234567\",\n  \"urlLogo\": \"https://example.com/logo.png\",\n  \"idPropietario\": {{idPropietario}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{plazoletaBaseUrl}}/restaurantes"
+          }
+        },
+        {
+          "name": "HU3 - Crear plato (propietario)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Plato creado', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { pm.environment.set('idPlato', pm.response.json().plato.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenPropietario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Hamburguesa clasica\",\n  \"precio\": 25000,\n  \"descripcion\": \"Con queso\",\n  \"urlImagen\": \"https://example.com/burger.png\",\n  \"categoria\": \"Hamburguesas\",\n  \"idRestaurante\": {{idRestaurante}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{plazoletaBaseUrl}}/platos"
+          }
+        },
+        {
+          "name": "HU4 - Modificar plato propio",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenPropietario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"precio\": 30000,\n  \"descripcion\": \"Con queso y tocineta\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{plazoletaBaseUrl}}/platos/{{idPlato}}"
+          }
+        },
+        {
+          "name": "HU6 - Crear empleado (propietario)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const stamp = Date.now().toString();",
+                  "pm.environment.set('empleadoCorreo', `empleado.${stamp}@example.com`);",
+                  "pm.environment.set('empleadoDocumento', `${stamp}1`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Empleado creado', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { pm.environment.set('idEmpleado', pm.response.json().id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenPropietario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan\",\n  \"apellido\": \"Lopez\",\n  \"documentoDeIdentidad\": \"{{empleadoDocumento}}\",\n  \"celular\": \"+573001234568\",\n  \"correo\": \"{{empleadoCorreo}}\",\n  \"clave\": \"{{empleadoClave}}\",\n  \"idRol\": 3,\n  \"idRestaurante\": {{idRestaurante}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{usuariosBaseUrl}}/empleados"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HU8-HU12 - Cliente, menu y pedidos",
+      "item": [
+        {
+          "name": "HU8 - Crear cuenta cliente",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const stamp = Date.now().toString();",
+                  "pm.environment.set('clienteCorreo', `cliente.${stamp}@example.com`);",
+                  "pm.environment.set('clienteDocumento', `${stamp}2`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cliente creado', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { pm.environment.set('idCliente', pm.response.json().id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Camila\",\n  \"apellido\": \"Gomez\",\n  \"documentoDeIdentidad\": \"{{clienteDocumento}}\",\n  \"celular\": \"+573001234569\",\n  \"correo\": \"{{clienteCorreo}}\",\n  \"clave\": \"{{clienteClave}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{usuariosBaseUrl}}/clientes"
+          }
+        },
+        {
+          "name": "HU5 - Login cliente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login de cliente responde 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.environment.set('tokenCliente', body.token);",
+                  "  pm.environment.set('idCliente', body.idUsuario);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{clienteCorreo}}\",\n  \"clave\": \"{{clienteClave}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{usuariosBaseUrl}}/login"
+          }
+        },
+        {
+          "name": "HU9 - Listar restaurantes paginados (cliente)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{plazoletaBaseUrl}}/restaurantes?page=0&size=10"
+          }
+        },
+        {
+          "name": "HU10 - Consultar menu por categoria (cliente)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{plazoletaBaseUrl}}/restaurantes/{{idRestaurante}}/platos?page=0&size=10&categoria=Hamburguesas"
+          }
+        },
+        {
+          "name": "HU11 - Crear pedido (cliente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Pedido creado', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { pm.environment.set('idPedido', pm.response.json().pedido.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idRestaurante\": {{idRestaurante}},\n  \"platos\": [\n    { \"idPlato\": {{idPlato}}, \"cantidad\": 2 }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{plazoletaBaseUrl}}/pedidos"
+          }
+        },
+        {
+          "name": "HU5 - Login empleado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login de empleado responde 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.environment.set('tokenEmpleado', body.token);",
+                  "  pm.environment.set('idEmpleado', body.idUsuario);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{empleadoCorreo}}\",\n  \"clave\": \"{{empleadoClave}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{usuariosBaseUrl}}/login"
+          }
+        },
+        {
+          "name": "HU12 - Listar pedidos por estado (empleado)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEmpleado}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{plazoletaBaseUrl}}/pedidos?estado=PENDIENTE&page=0&size=10"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HU13-HU17 - Ciclo del pedido y busqueda",
+      "item": [
+        {
+          "name": "HU13 - Asignarse el pedido (empleado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEmpleado}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "url": "{{plazoletaBaseUrl}}/pedidos/{{idPedido}}/asignar"
+          }
+        },
+        {
+          "name": "HU16 - Cancelar pedido en preparacion (debe rechazarse)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 409', function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "url": "{{plazoletaBaseUrl}}/pedidos/{{idPedido}}/cancelar"
+          }
+        },
+        {
+          "name": "HU14 - Marcar pedido listo y enviar PIN (empleado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEmpleado}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "url": "{{plazoletaBaseUrl}}/pedidos/{{idPedido}}/listo"
+          }
+        },
+        {
+          "name": "HU15 - Entregar pedido con PIN (empleado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEmpleado}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "url": "{{plazoletaBaseUrl}}/pedidos/{{idPedido}}/entregar",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pin\": \"{{pinPedido}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "HU17 - Consultar trazabilidad (cliente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{plazoletaBaseUrl}}/pedidos/{{idPedido}}/trazabilidad"
+          }
+        },
+        {
+          "name": "HU11 - Crear otro pedido para cancelar (cliente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { pm.environment.set('idPedido', pm.response.json().pedido.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "url": "{{plazoletaBaseUrl}}/pedidos",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idRestaurante\": {{idRestaurante}},\n  \"platos\": [\n    { \"idPlato\": {{idPlato}}, \"cantidad\": 1 }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "HU16 - Cancelar pedido pendiente (cliente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "url": "{{plazoletaBaseUrl}}/pedidos/{{idPedido}}/cancelar"
+          }
+        },
+        {
+          "name": "Busqueda - Buscar plato por nombre (cliente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{plazoletaBaseUrl}}/restaurantes/{{idRestaurante}}/platos/buscar?nombre=hamb"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HU7 - Habilitar o deshabilitar plato (propietario)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tokenPropietario}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"activo\": false\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{plazoletaBaseUrl}}/platos/{{idPlato}}/estado"
+      }
+    }
+  ],
+  "protocolProfileBehavior": {}
+}

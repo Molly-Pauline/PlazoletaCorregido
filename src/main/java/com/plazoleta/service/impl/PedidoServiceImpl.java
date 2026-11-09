@@ -1,0 +1,278 @@
+package com.plazoleta.service.impl;
+
+import com.plazoleta.algoritmo.MergeSort;
+import com.plazoleta.dto.request.PedidoDetalleRequest;
+import com.plazoleta.dto.request.PedidoRequest;
+import com.plazoleta.dto.response.PedidoResponse;
+import com.plazoleta.dto.response.TrazabilidadResponse;
+import com.plazoleta.entity.DetallePedido;
+import com.plazoleta.entity.EstadoPedido;
+import com.plazoleta.entity.HistorialPedido;
+import com.plazoleta.entity.Pedido;
+import com.plazoleta.entity.Plato;
+import com.plazoleta.entity.Restaurante;
+import com.plazoleta.exception.DomainException;
+import com.plazoleta.repository.HistorialPedidoRepository;
+import com.plazoleta.repository.PedidoRepository;
+import com.plazoleta.repository.PlatoRepository;
+import com.plazoleta.repository.RestauranteRepository;
+import com.plazoleta.repository.UsuarioRepository;
+import com.plazoleta.security.AuthenticatedUser;
+import com.plazoleta.service.NotificacionSmsService;
+import com.plazoleta.service.PedidoService;
+import com.plazoleta.service.PedidoCreationLock;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+/** Implementa las reglas de negocio para crear pedidos y consultar los de un restaurante. */
+@Service
+public class PedidoServiceImpl implements PedidoService {
+
+    /** Estados que bloquean un segundo pedido del mismo cliente según HU11. */
+    private static final Set<EstadoPedido> PEDIDOS_ACTIVOS = EnumSet.of(
+            EstadoPedido.PENDIENTE, EstadoPedido.EN_PREPARACION, EstadoPedido.LISTO);
+
+    /** Persistencia de pedidos y consultas filtradas por cliente, estado y restaurante. */
+    private final PedidoRepository pedidoRepository;
+    /** Permite resolver los platos solicitados y comprobar su estado actual. */
+    private final PlatoRepository platoRepository;
+    /** Permite confirmar que existe el restaurante solicitado. */
+    private final RestauranteRepository restauranteRepository;
+    /** Evita carreras al crear pedidos concurrentes para el mismo cliente. */
+    private final PedidoCreationLock pedidoCreationLock;
+    /** Guarda y consulta la trazabilidad de los pedidos (HU17). */
+    private final HistorialPedidoRepository historialRepository;
+    /** Permite obtener el celular del cliente para avisarle que su pedido está listo. */
+    private final UsuarioRepository usuarioRepository;
+    /** Protege el PIN con BCrypt, igual que las contraseñas. */
+    private final PasswordEncoder passwordEncoder;
+    /** Envía el PIN de seguridad al cliente (HU14). */
+    private final NotificacionSmsService notificacionSms;
+    /** Generador apto para valores de seguridad como el PIN. */
+    private final SecureRandom random = new SecureRandom();
+
+    /** Inyecta los repositorios, el mecanismo de exclusión por cliente y los servicios de apoyo. */
+    public PedidoServiceImpl(PedidoRepository pedidoRepository, PlatoRepository platoRepository,
+                             RestauranteRepository restauranteRepository, PedidoCreationLock pedidoCreationLock,
+                             HistorialPedidoRepository historialRepository, UsuarioRepository usuarioRepository,
+                             PasswordEncoder passwordEncoder, NotificacionSmsService notificacionSms) {
+        this.pedidoRepository = pedidoRepository;
+        this.platoRepository = platoRepository;
+        this.restauranteRepository = restauranteRepository;
+        this.pedidoCreationLock = pedidoCreationLock;
+        this.historialRepository = historialRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.notificacionSms = notificacionSms;
+    }
+
+    /** Crea un pedido en una sola transacción y restringe la operación a clientes autenticados (HU11). */
+    @Override
+    @Transactional
+    public PedidoResponse crear(PedidoRequest request, AuthenticatedUser user) {
+        // La identidad y el rol provienen del token validado; nunca se aceptan desde el cuerpo del pedido.
+        if (user == null || !"CLIENTE".equals(user.rol())) {
+            throw new DomainException(HttpStatus.FORBIDDEN, "Solo un cliente autenticado puede crear pedidos");
+        }
+        // Se mantiene el bloqueo durante la transacción para que dos solicitudes no superen juntas la validación.
+        try (PedidoCreationLock.Handle ignored = pedidoCreationLock.acquire(user.idUsuario())) {
+            return crearConBloqueo(request, user);
+        }
+    }
+
+    /** Ejecuta las validaciones y persistencia una vez adquirido el bloqueo del cliente. */
+    private PedidoResponse crearConBloqueo(PedidoRequest request, AuthenticatedUser user) {
+        // Solo los estados pendientes, en preparación o listos impiden que el cliente solicite otro pedido.
+        if (pedidoRepository.existsByIdClienteAndEstadoIn(user.idUsuario(), PEDIDOS_ACTIVOS)) {
+            throw new DomainException(HttpStatus.CONFLICT,
+                    "El cliente ya tiene un pedido pendiente, en preparacion o listo");
+        }
+        // El pedido debe asociarse a un restaurante existente antes de validar sus platos.
+        Restaurante restaurante = restauranteRepository.findById(request.idRestaurante())
+                .orElseThrow(() -> new DomainException(HttpStatus.BAD_REQUEST, "El restaurante no existe"));
+
+        // Se usa un conjunto para rechazar líneas repetidas y un long para acumular importes con rango ampliado.
+        Set<Integer> dishIds = new HashSet<>();
+        // Guarda los platos ya consultados para no buscarlos dos veces en la base.
+        List<Plato> platos = new ArrayList<>();
+        long total = 0;
+        Pedido pedido;
+        // El try captura desbordamientos de la multiplicación o suma del total, sin guardar un pedido parcial.
+        try {
+            for (PedidoDetalleRequest item : request.platos()) {
+                // Una sola línea por plato evita ambigüedad: la cantidad se expresa en esa línea.
+                if (!dishIds.add(item.idPlato())) {
+                    throw new DomainException(HttpStatus.BAD_REQUEST, "No repitas un plato; acumula su cantidad en una linea");
+                }
+                // Se resuelve cada identificador contra la base, sin confiar en precios enviados por el cliente.
+                Plato plato = platoRepository.findById(item.idPlato())
+                        .orElseThrow(() -> new DomainException(HttpStatus.BAD_REQUEST, "Uno de los platos no existe"));
+                // Un plato desactivado no se puede incorporar a un pedido nuevo.
+                if (!plato.isActivo()) {
+                    throw new DomainException(HttpStatus.BAD_REQUEST, "No se puede pedir un plato inactivo");
+                }
+                // Todas las líneas deben provenir del restaurante seleccionado para el pedido.
+                if (!plato.getRestaurante().getId().equals(restaurante.getId())) {
+                    throw new DomainException(HttpStatus.BAD_REQUEST, "Todos los platos deben pertenecer al restaurante del pedido");
+                }
+                // El precio persistido y la cantidad validada forman el subtotal; las operaciones detectan overflow.
+                total = Math.addExact(total, Math.multiplyExact((long) plato.getPrecio(), item.cantidad()));
+                platos.add(plato);
+            }
+            // El cliente asociado se toma de la identidad firmada, y el estado inicial lo fija la entidad Pedido.
+            pedido = new Pedido(user.idUsuario(), restaurante, Math.toIntExact(total));
+            for (int i = 0; i < platos.size(); i++) {
+                // Se reutilizan los platos validados en el primer recorrido, en el mismo orden de la solicitud.
+                pedido.agregarDetalle(new DetallePedido(platos.get(i), request.platos().get(i).cantidad()));
+            }
+        } catch (ArithmeticException exception) {
+            // El overflow se transforma en una respuesta de validación y no en un error interno de servidor.
+            throw new DomainException(HttpStatus.BAD_REQUEST, "El total del pedido excede el limite permitido");
+        }
+        // Solo después de validar todas las líneas se persiste y se transforma a la respuesta pública.
+        Pedido guardado = pedidoRepository.save(pedido);
+        // El primer registro de trazabilidad deja constancia de cuándo se creó el pedido.
+        registrarCambio(guardado, null, user);
+        return PedidoResponse.from(guardado);
+    }
+
+    /** Consulta pedidos de un empleado por estado y por el restaurante incluido en su identidad firmada (HU12). */
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PedidoResponse> listarPorEstado(EstadoPedido estado, int page, int size, AuthenticatedUser empleado) {
+        // No se permite elegir el restaurante en la petición: debe venir firmado en el token del empleado.
+        if (empleado == null || !"EMPLEADO".equals(empleado.rol()) || empleado.idRestaurante() == null) {
+            throw new DomainException(HttpStatus.FORBIDDEN, "El empleado no tiene un restaurante asociado");
+        }
+        // Se acota el tamaño de página para evitar consultas excesivas y se exige un estado explícito.
+        if (estado == null || page < 0 || size < 1 || size > 100) {
+            throw new DomainException(HttpStatus.BAD_REQUEST, "Estado o paginacion invalida");
+        }
+        // La consulta filtra en base de datos por restaurante y estado, y convierte cada fila a DTO de salida.
+        return pedidoRepository.findByRestaurante_IdAndEstado(empleado.idRestaurante(), estado,
+                        PageRequest.of(page, size))
+                .map(PedidoResponse::from);
+    }
+
+    /** Asigna el pedido al empleado autenticado y lo pasa a preparación (HU13). */
+    @Override
+    @Transactional
+    public PedidoResponse asignar(Integer idPedido, AuthenticatedUser empleado) {
+        Pedido pedido = obtenerDelRestaurante(idPedido, empleado);
+        EstadoPedido anterior = pedido.getEstado();
+        pedido.asignarEmpleado(empleado.idUsuario());
+        registrarCambio(pedido, anterior, empleado);
+        return PedidoResponse.from(pedido);
+    }
+
+    /** Marca el pedido como listo y envía el PIN por SMS; si el envío falla, el cambio se revierte (HU14). */
+    @Override
+    @Transactional
+    public PedidoResponse marcarListo(Integer idPedido, AuthenticatedUser empleado) {
+        Pedido pedido = obtenerDelRestaurante(idPedido, empleado);
+        EstadoPedido anterior = pedido.getEstado();
+        String pin = generarPin();
+        pedido.marcarListo(passwordEncoder.encode(pin));
+        registrarCambio(pedido, anterior, empleado);
+        notificacionSms.enviar(obtenerCelularCliente(pedido),
+                "Tu pedido #" + pedido.getId() + " de " + pedido.getRestaurante().getNombre()
+                        + " esta listo. PIN para reclamarlo: " + pin);
+        return PedidoResponse.from(pedido);
+    }
+
+    /** Entrega el pedido solo si está listo y el PIN coincide con el enviado al cliente (HU15). */
+    @Override
+    @Transactional
+    public PedidoResponse entregar(Integer idPedido, String pin, AuthenticatedUser empleado) {
+        Pedido pedido = obtenerDelRestaurante(idPedido, empleado);
+        EstadoPedido anterior = pedido.getEstado();
+        // Solo un pedido listo tiene PIN; en los demás estados responde el State con su propio error.
+        if (anterior == EstadoPedido.LISTO && !passwordEncoder.matches(pin, pedido.getPinHash())) {
+            throw new DomainException(HttpStatus.BAD_REQUEST, "El PIN de seguridad es incorrecto");
+        }
+        pedido.entregar();
+        registrarCambio(pedido, anterior, empleado);
+        return PedidoResponse.from(pedido);
+    }
+
+    /** Cancela un pedido propio; el State rechaza cualquier estado distinto de pendiente (HU16). */
+    @Override
+    @Transactional
+    public PedidoResponse cancelar(Integer idPedido, AuthenticatedUser cliente) {
+        Pedido pedido = pedidoRepository.findByIdParaActualizar(idPedido).orElseThrow(this::pedidoNoEncontrado);
+        verificarDueno(pedido, cliente);
+        EstadoPedido anterior = pedido.getEstado();
+        pedido.cancelar();
+        registrarCambio(pedido, anterior, cliente);
+        return PedidoResponse.from(pedido);
+    }
+
+    /** Devuelve los cambios de estado de un pedido propio, del más antiguo al más reciente (HU17). */
+    @Override
+    @Transactional(readOnly = true)
+    public List<TrazabilidadResponse> consultarTrazabilidad(Integer idPedido, AuthenticatedUser cliente) {
+        Pedido pedido = pedidoRepository.findById(idPedido).orElseThrow(this::pedidoNoEncontrado);
+        verificarDueno(pedido, cliente);
+        // El ID desempata los cambios registrados en el mismo instante.
+        Comparator<HistorialPedido> cronologico = Comparator.comparing(HistorialPedido::getFecha)
+                .thenComparing(HistorialPedido::getId);
+        return MergeSort.ordenar(historialRepository.findByIdPedido(idPedido), cronologico).stream()
+                .map(TrazabilidadResponse::from)
+                .toList();
+    }
+
+    /** Carga el pedido bloqueando su fila y exige que pertenezca al restaurante firmado en el token del empleado. */
+    private Pedido obtenerDelRestaurante(Integer idPedido, AuthenticatedUser empleado) {
+        if (empleado == null || !"EMPLEADO".equals(empleado.rol()) || empleado.idRestaurante() == null) {
+            throw new DomainException(HttpStatus.FORBIDDEN, "El empleado no tiene un restaurante asociado");
+        }
+        Pedido pedido = pedidoRepository.findByIdParaActualizar(idPedido).orElseThrow(this::pedidoNoEncontrado);
+        if (!empleado.idRestaurante().equals(pedido.getRestaurante().getId())) {
+            throw new DomainException(HttpStatus.FORBIDDEN, "El pedido no pertenece al restaurante del empleado");
+        }
+        return pedido;
+    }
+
+    /** Impide que un cliente gestione o consulte pedidos de otra persona. */
+    private void verificarDueno(Pedido pedido, AuthenticatedUser cliente) {
+        if (cliente == null || !pedido.getIdCliente().equals(cliente.idUsuario())) {
+            throw new DomainException(HttpStatus.FORBIDDEN, "El pedido no pertenece al cliente autenticado");
+        }
+    }
+
+    /** Guarda el registro de trazabilidad con el estado actual del pedido. */
+    private void registrarCambio(Pedido pedido, EstadoPedido anterior, AuthenticatedUser usuario) {
+        historialRepository.save(new HistorialPedido(pedido.getId(), anterior, pedido.getEstado(),
+                usuario.idUsuario(), LocalDateTime.now()));
+    }
+
+    /** Obtiene el celular de destino del SMS. */
+    private String obtenerCelularCliente(Pedido pedido) {
+        return usuarioRepository.findById(pedido.getIdCliente())
+                .map(usuario -> usuario.getCelular())
+                .filter(celular -> !celular.isBlank())
+                .orElseThrow(() -> new DomainException(HttpStatus.CONFLICT, "El cliente no tiene un celular registrado"));
+    }
+
+    /** Genera un PIN aleatorio de seis dígitos, conservando los ceros iniciales. */
+    private String generarPin() {
+        return String.format("%06d", random.nextInt(1_000_000));
+    }
+
+    private DomainException pedidoNoEncontrado() {
+        return new DomainException(HttpStatus.NOT_FOUND, "El pedido no existe");
+    }
+}

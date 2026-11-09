@@ -1,0 +1,34 @@
+flowchart TB
+    cliente["Cliente HTTP<br/>Postman o Swagger UI"]
+    seguridad["Seguridad<br/>BearerTokenFilter + SecurityConfig<br/>verifica el JWT y el rol"]
+
+    subgraph usuarios["Módulo Usuarios"]
+        c1["UsuarioController<br/>/api/v1/usuarios"] --> s1["UsuarioServiceImpl<br/>HmacTokenService"]
+    end
+    subgraph plazoleta["Módulo Plazoleta"]
+        c2["RestauranteController<br/>PlatoController"] --> s2["RestauranteServiceImpl<br/>PlatoServiceImpl"]
+    end
+    subgraph pedidos["Módulo Pedidos y trazabilidad"]
+        c3["PedidoController<br/>/pedidos"] --> s3["PedidoServiceImpl<br/>patrón State"]
+    end
+    subgraph notificaciones["Módulo Notificaciones"]
+        s4["NotificacionSmsService<br/>SmsSimuladoService"]
+    end
+
+    alg["Algoritmos<br/>MergeSort + BusquedaBinaria"]
+    repos["Repositorios<br/>Spring Data JPA"]
+    db[("MySQL<br/>plazoleta_bd")]
+    consola["Consola<br/>SMS simulado con el PIN"]
+
+    cliente -- "JSON + Authorization: Bearer" --> seguridad
+    seguridad --> c1
+    seguridad --> c2
+    seguridad --> c3
+    s3 -- "pedido listo" --> s4
+    s2 --> alg
+    s3 --> alg
+    s1 --> repos
+    s2 --> repos
+    s3 --> repos
+    repos --> db
+    s4 -.-> consola
