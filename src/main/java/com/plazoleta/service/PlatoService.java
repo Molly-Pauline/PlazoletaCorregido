@@ -8,6 +8,8 @@ import com.plazoleta.security.AuthenticatedUser;
 import com.plazoleta.dto.response.PlatoResponse;
 import org.springframework.data.domain.Page;
 
+import java.util.List;
+
 /** Contrato de creación, actualización, disponibilidad y consulta de platos. */
 public interface PlatoService {
     /** Crea un plato dentro de un restaurante que pertenezca al usuario autenticado. */
@@ -22,4 +24,6 @@ public interface PlatoService {
     /** Lista el menú activo con filtro opcional de categoría y paginación. */
     Page<PlatoResponse> listarMenu(Integer idRestaurante, String categoria, int page, int size);
 
+    /** Busca platos activos cuyo nombre empiece por el texto indicado, sin distinguir mayúsculas ni tildes. */
+    List<PlatoResponse> buscarEnMenu(Integer idRestaurante, String nombre);
 }

@@ -1,5 +1,7 @@
 package com.plazoleta.service.impl;
 
+import com.plazoleta.algoritmo.BusquedaBinaria;
+import com.plazoleta.algoritmo.MergeSort;
 import com.plazoleta.entity.Plato;
 import com.plazoleta.entity.Restaurante;
 import com.plazoleta.dto.request.PlatoRequest;
@@ -16,6 +18,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.text.Normalizer;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
 
 /** Aplica reglas de propiedad, actualización limitada y consulta del menú de platos. */
 @Service
@@ -85,6 +93,34 @@ public class PlatoServiceImpl implements PlatoService {
         // El repositorio filtra activos y por categoría; la capa de servicio transforma entidades en respuestas.
         return platoRepository.listarMenu(idRestaurante, categoryFilter, PageRequest.of(page, size))
                 .map(PlatoResponse::from);
+    }
+
+    /** Ordena el menú por nombre con merge sort y ubica con búsqueda binaria los que empiezan por el texto. */
+    @Transactional(readOnly = true)
+    public List<PlatoResponse> buscarEnMenu(Integer idRestaurante, String nombre) {
+        if (nombre == null || nombre.isBlank()) {
+            throw new DomainException(HttpStatus.BAD_REQUEST, "Debes indicar el nombre del plato");
+        }
+        if (!restauranteRepository.existsById(idRestaurante)) {
+            throw new DomainException(HttpStatus.NOT_FOUND, "El restaurante no existe");
+        }
+        String prefijo = normalizar(nombre);
+        List<Plato> ordenados = MergeSort.ordenar(platoRepository.findByRestaurante_IdAndActivoTrue(idRestaurante),
+                Comparator.comparing((Plato plato) -> normalizar(plato.getNombre())));
+        // La búsqueda binaria encuentra la primera coincidencia; las demás están justo a continuación.
+        int indice = BusquedaBinaria.limiteInferior(ordenados, plato -> normalizar(plato.getNombre()).compareTo(prefijo));
+        List<PlatoResponse> resultado = new ArrayList<>();
+        while (indice < ordenados.size() && normalizar(ordenados.get(indice).getNombre()).startsWith(prefijo)) {
+            resultado.add(PlatoResponse.from(ordenados.get(indice++)));
+        }
+        return resultado;
+    }
+
+    /** Quita espacios en los extremos, tildes y mayúsculas para comparar nombres de forma uniforme. */
+    private static String normalizar(String texto) {
+        return Normalizer.normalize(texto.trim(), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT);
     }
 
     /** Impide que un propietario modifique platos pertenecientes a otro propietario. */

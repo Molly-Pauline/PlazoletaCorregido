@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 /** Publica operaciones de restaurantes y consulta del menú de platos. */
 @RestController
 @RequestMapping("/restaurantes")
@@ -76,6 +78,17 @@ public class RestauranteController {
                                          @RequestParam(defaultValue = "0") int page,
                                          @RequestParam(defaultValue = "10") int size) {
         return platoService.listarMenu(idRestaurante, categoria, page, size);
+    }
+
+    /** Busca en el menú los platos cuyo nombre empieza por el texto indicado.
+     * @param idRestaurante restaurante cuyo menú se consulta
+     * @param nombre texto inicial del nombre, sin distinguir mayúsculas ni tildes
+     * @return platos activos que coinciden, ordenados por nombre
+     */
+    @GetMapping("/{idRestaurante}/platos/buscar")
+    public List<PlatoResponse> buscarEnMenu(@PathVariable Integer idRestaurante,
+                                            @RequestParam(required = false) String nombre) {
+        return platoService.buscarEnMenu(idRestaurante, nombre);
     }
 
 }
