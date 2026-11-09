@@ -22,7 +22,4 @@ public interface UsuarioService {
 
     /** Valida credenciales y emite el token de acceso compartido. */
     LoginResponse login(LoginRequest request);
-
-    /** Consulta internamente si un identificador pertenece a un propietario valido. */
-    boolean esPropietarioValido(Integer idUsuario);
 }

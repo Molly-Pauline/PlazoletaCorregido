@@ -7,7 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/** Entidad persistida del restaurante; conserva el ID del propietario como referencia al servicio Usuarios. */
+/** Entidad persistida del restaurante; conserva el ID del usuario propietario. */
 @Entity
 @Table(name = "restaurantes")
 public class Restaurante {
@@ -37,7 +37,7 @@ public class Restaurante {
     @Column(name = "url_logo", nullable = false, length = 500)
     private String urlLogo;
 
-    /** ID externo de Usuarios; no es una relación JPA porque cada servicio administra su propia base. */
+    /** ID del usuario con rol PROPIETARIO; la validación de ese rol la hace el servicio al crear el restaurante. */
     @Column(name = "id_propietario", nullable = false)
     private Integer idPropietario;
 

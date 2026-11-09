@@ -15,6 +15,4 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
     Optional<Usuario> findByCorreo(String correo);
     /** Comprueba si ya existe un usuario con el rol indicado. */
     boolean existsByRol(com.plazoleta.entity.Rol rol);
-    /** Confirma que el identificador corresponde a un usuario con el rol solicitado. */
-    boolean existsByIdAndRol(Integer id, com.plazoleta.entity.Rol rol);
 }
